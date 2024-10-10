@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Launch NPS",
+        "type": "go",
+        "request": "launch",
+        "mode": "auto",
+        "program": "${workspaceFolder}/cmd/nps/nps.go",
+        "args": [],
+        "env": {},
+        "cwd": "${workspaceFolder}",
+      }
+    ]
+  }
+  
