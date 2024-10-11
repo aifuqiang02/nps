@@ -137,6 +137,8 @@ type Tunnel struct {
 	Flow         *Flow
 	Password     string
 	Remark       string
+	VerifyKey    string
+	UserId       float64
 	TargetAddr   string
 	NoStore      bool
 	LocalPath    string

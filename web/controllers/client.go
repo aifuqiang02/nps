@@ -78,13 +78,26 @@ func (s *ClientController) Add() {
 }
 func (s *ClientController) GetClient() {
 	if s.Ctx.Request.Method == "POST" {
-		id := s.GetIntNoErr("id")
+		id := s.GetIntNoErr("id", 0)
+		if id == 0 {
+			id = s.GetSession("clientId").(int)
+		}
 		data := make(map[string]interface{})
 		if c, err := file.GetDb().GetClient(id); err != nil {
 			data["code"] = 0
 		} else {
 			data["code"] = 1
 			data["data"] = c
+
+			if _, ok := server.Bridge.Client.Load(c.Id); ok {
+				c.IsConnect = true
+			} else {
+				c.IsConnect = false
+			}
+			serverIp := s.Ctx.Request.Host
+			serverIp = common.GetIpByAddr(serverIp)
+			data["ServerIp"] = serverIp
+			data["bridgePort"] = server.Bridge.TunnelPort
 		}
 		s.Data["json"] = data
 		s.ServeJSON()

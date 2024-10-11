@@ -30,6 +30,18 @@ func InitAllowPort() {
 	ports = common.GetPorts(p)
 }
 
+// 获取服务端空闲端口
+func GetNotUsePort(usedList []int) int {
+	p := beego.AppConfig.String("allow_ports")
+	ports = common.GetPorts(p)
+	for _, v := range ports {
+		if !common.InIntArr(usedList, v) {
+			return v
+		}
+	}
+	return 0
+}
+
 func TestServerPort(p int, m string) (b bool) {
 	if m == "p2p" || m == "secret" {
 		return true

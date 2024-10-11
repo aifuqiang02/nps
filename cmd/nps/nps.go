@@ -39,6 +39,8 @@ func main() {
 		common.PrintVersion()
 		return
 	}
+
+	logs.Error(common.GetRunPath())
 	if err := beego.LoadAppConfig("ini", filepath.Join(common.GetRunPath(), "conf", "nps.conf")); err != nil {
 		log.Fatalln("load config file error", err.Error())
 	}

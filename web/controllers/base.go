@@ -43,6 +43,18 @@ func (s *BaseController) Prepare() {
 	// param 2 is timestamp (It's limited to 20 seconds.)
 	configKey := beego.AppConfig.String("auth_key")
 	tokenStr := s.Ctx.Request.Header.Get("Authorization")
+	vkey := s.getEscapeString("vkey")
+	if vkey != "" {
+		clientId, err1 := file.GetDb().GetClientIdByVkey(vkey)
+		if err1 != nil {
+			s.SetSession("clientId", 0)
+		} else {
+			s.SetSession("clientId", clientId)
+		}
+	} else {
+		s.SetSession("clientId", 0)
+	}
+
 	if tokenStr != "" {
 		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 			return []byte(configKey), nil

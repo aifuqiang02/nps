@@ -11,6 +11,7 @@ import (
 	"ehang.io/nps/lib/common"
 	"ehang.io/nps/lib/crypt"
 	"ehang.io/nps/lib/rate"
+	"ehang.io/nps/server/tool"
 )
 
 type DbUtils struct {
@@ -107,6 +108,17 @@ func (s *DbUtils) NewTask(t *Tunnel) (err error) {
 	s.JsonDb.Tasks.Store(t.Id, t)
 	s.JsonDb.StoreTasksToJsonFile()
 	return
+}
+
+// 获取一个未使用的服务端端口
+func (s *DbUtils) GetNotUsePort() int {
+	var list []int
+	s.JsonDb.Tasks.Range(func(key, value interface{}) bool {
+		v := value.(*Tunnel)
+		list = append(list, v.Port)
+		return true
+	})
+	return tool.GetNotUsePort(list)
 }
 
 func (s *DbUtils) UpdateTask(t *Tunnel) error {
@@ -292,7 +304,7 @@ func (s *DbUtils) GetClientIdByVkey(vkey string) (id int, err error) {
 	var exist bool
 	s.JsonDb.Clients.Range(func(key, value interface{}) bool {
 		v := value.(*Client)
-		if crypt.Md5(v.VerifyKey) == vkey {
+		if crypt.Md5(v.VerifyKey) == vkey || v.VerifyKey == vkey {
 			exist = true
 			id = v.Id
 			return false

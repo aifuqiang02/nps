@@ -1,11 +1,12 @@
 package controllers
 
 import (
+	"ehang.io/nps/lib/common"
 	"ehang.io/nps/lib/file"
 	"ehang.io/nps/server"
 	"ehang.io/nps/server/tool"
-
 	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/logs"
 )
 
 type IndexController struct {
@@ -80,8 +81,16 @@ func (s *IndexController) All() {
 func (s *IndexController) GetTunnel() {
 	start, length := s.GetAjaxParams()
 	taskType := s.getEscapeString("type")
-	clientId := s.GetIntNoErr("client_id")
+	clientId := s.GetIntNoErr("client_id", 0)
+	if clientId == 0 {
+		clientId = s.GetSession("clientId").(int)
+	}
 	list, cnt := server.GetTunnel(start, length, taskType, clientId, s.getEscapeString("search"))
+	serverIp := s.Ctx.Request.Host
+	serverIp = common.GetIpByAddr(serverIp)
+	for _, t := range list {
+		t.ServerIp = serverIp
+	}
 	s.AjaxTable(list, cnt, cnt, nil)
 }
 
@@ -93,13 +102,33 @@ func (s *IndexController) Add() {
 		s.display()
 	} else {
 		vkey := s.getEscapeString("vkey")
-		client_id, err1 := file.GetDb().GetClientIdByVkey(vkey)
-		if err1 != nil {
-			s.AjaxErr(err1.Error())
+		client_id := s.GetIntNoErr("client_id", 0)
+		if client_id == 0 {
+			var err1 error
+			client_id, err1 = file.GetDb().GetClientIdByVkey(vkey)
+			if err1 != nil {
+				s.AjaxErr(err1.Error())
+			}
+		}
+
+		Client, err := file.GetDb().GetClient(client_id)
+		if err != nil {
+			s.AjaxErr(err.Error())
+		}
+		logs.Error("GetNotUsePort - 1")
+		port := file.GetDb().GetNotUsePort()
+		logs.Error("GetNotUsePort - 2")
+		if port == 0 {
+			s.AjaxErr("The port cannot be opened because it may has been occupied or is no longer allowed.")
+		}
+		if s.GetIntNoErr("port", 0) != 0 {
+			port = s.GetIntNoErr("port")
 		}
 
 		t := &file.Tunnel{
-			Port:      s.GetIntNoErr("port"),
+			Port:      port,
+			UserId:    Client.UserId,
+			VerifyKey: vkey,
 			ServerIp:  s.getEscapeString("server_ip"),
 			Mode:      s.getEscapeString("type"),
 			Target:    &file.Target{TargetStr: s.getEscapeString("target"), LocalProxy: s.GetBoolNoErr("local_proxy")},
@@ -114,8 +143,8 @@ func (s *IndexController) Add() {
 		if !tool.TestServerPort(t.Port, t.Mode) {
 			s.AjaxErr("The port cannot be opened because it may has been occupied or is no longer allowed.")
 		}
-		var err error
-		if t.Client, err = file.GetDb().GetClient(client_id); err != nil {
+		t.Client, err = file.GetDb().GetClient(client_id)
+		if err != nil {
 			s.AjaxErr(err.Error())
 		}
 		if t.Client.MaxTunnelNum != 0 && t.Client.GetTunnelNum() >= t.Client.MaxTunnelNum {
@@ -197,6 +226,14 @@ func (s *IndexController) Stop() {
 
 func (s *IndexController) Del() {
 	id := s.GetIntNoErr("id")
+	clientId := s.GetSession("clientId")
+	t, err := file.GetDb().GetTask(id)
+	if err != nil {
+		s.AjaxErr("delete error")
+	}
+	if t.Client.Id != clientId.(int) {
+		s.AjaxErr("delete error")
+	}
 	if err := server.DelTask(id); err != nil {
 		s.AjaxErr("delete error")
 	}
