@@ -32,7 +32,7 @@ func NewHttpsServer(l net.Listener, bridge NetBridge, useCache bool, cacheLen in
 	return https
 }
 
-//start https server
+// start https server
 func (https *HttpsServer) Start() error {
 	if b, err := beego.AppConfig.Bool("https_just_proxy"); err == nil && b {
 		conn.Accept(https.listener, func(c net.Conn) {
@@ -42,7 +42,9 @@ func (https *HttpsServer) Start() error {
 		//start the default listener
 		certFile := beego.AppConfig.String("https_default_cert_file")
 		keyFile := beego.AppConfig.String("https_default_key_file")
+		logs.Notice("https start ")
 		if common.FileExists(certFile) && common.FileExists(keyFile) {
+			logs.Notice("https start FileExists")
 			l := NewHttpsListener(https.listener)
 			https.NewHttps(l, certFile, keyFile)
 			https.httpsListenerMap.Store("default", l)
@@ -99,7 +101,7 @@ func (https *HttpsServer) NewHttps(l net.Listener, certFile string, keyFile stri
 	}()
 }
 
-//handle the https which is just proxy to other client
+// handle the https which is just proxy to other client
 func (https *HttpsServer) handleHttps(c net.Conn) {
 	hostName, rb := GetServerNameFromClientHello(c)
 	var targetAddr string
