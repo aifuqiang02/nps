@@ -125,6 +125,9 @@ func (s *DbUtils) GetClientList(start, length int, search, sortField, order stri
 		// 假设在数据库中 search 对应 id、verify_key、remark 字段的匹配
 		where += fmt.Sprintf(" AND (id = '%s' OR verify_key LIKE '%%%s%%' OR remark LIKE '%%%s%%')", search, search, search)
 	}
+	if sortField == "" {
+		sortField = "id"
+	}
 	// 查询总数
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM clients %s", where)
 	var cnt int
@@ -132,7 +135,7 @@ func (s *DbUtils) GetClientList(start, length int, search, sortField, order stri
 		panic(err)
 	}
 	// 查询数据
-	query := fmt.Sprintf("SELECT id, verify_key, remark FROM clients %s ORDER BY %s %s LIMIT %d, %d", where, sortField, order, start, length)
+	query := fmt.Sprintf("SELECT id, verify_key, remark, IFNULL(inlet_flow, 0) FROM clients %s ORDER BY %s %s LIMIT %d, %d", where, sortField, order, start, length)
 	rows, err := s.SqlDB.Query(query)
 	if err != nil {
 		panic(err)
@@ -141,9 +144,15 @@ func (s *DbUtils) GetClientList(start, length int, search, sortField, order stri
 	var list []*Client
 	for rows.Next() {
 		var c Client
-		if err := rows.Scan(&c.Id, &c.VerifyKey, &c.Remark); err != nil {
+		var inletFlow int64
+		if err := rows.Scan(&c.Id, &c.VerifyKey, &c.Remark, &inletFlow); err != nil {
 			panic(err)
 		}
+		if c.Flow == nil {
+			c.Flow = new(Flow)
+		}
+		c.Flow.InletFlow = inletFlow
+		c.NowRate = 0 // 设置默认值，防止前端读取时出现 null
 		list = append(list, &c)
 	}
 	return list, cnt
@@ -366,6 +375,10 @@ func (s *DbUtils) GetClient(id int) (*Client, error) {
 	if err != nil {
 		return nil, errors.New("未找到客户端")
 	}
+	if c.Flow == nil {
+		c.Flow = new(Flow)
+	}
+	c.NowRate = 0 // 设置默认值，避免前端读取时为 null
 	return &c, nil
 }
 

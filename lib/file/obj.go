@@ -41,6 +41,8 @@ type Client struct {
 	IsConnect       bool       //is the client connect
 	RateLimit       int        //rate /kb
 	Flow            *Flow      //flow setting
+	InletFlow       int64      // new field for inlet flow
+	NowRate         int64      // new field for current rate
 	Rate            *rate.Rate //rate limit
 	NoStore         bool       //no store to file
 	NoDisplay       bool       //no display on web
