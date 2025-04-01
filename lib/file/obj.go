@@ -94,47 +94,42 @@ func (s *Client) GetConn() bool {
 }
 
 func (s *Client) HasTunnel(t *Tunnel) (exist bool) {
-	GetDb().JsonDb.Tasks.Range(func(key, value interface{}) bool {
-		v := value.(*Tunnel)
-		if v.Client.Id == s.Id && v.Port == t.Port && t.Port != 0 {
-			exist = true
-			return false
+	tasks, err := GetDb().GetTasksByClientId(s.Id)
+	if err != nil {
+		return false
+	}
+	for _, v := range tasks {
+		if v.Port == t.Port && t.Port != 0 {
+			return true
 		}
-		return true
-	})
-	return
+	}
+	return false
 }
 
 func (s *Client) GetTunnelNum() (num int) {
-	GetDb().JsonDb.Tasks.Range(func(key, value interface{}) bool {
-		v := value.(*Tunnel)
-		if v.Client.Id == s.Id {
-			num++
-		}
-		return true
-	})
+	tasks, err := GetDb().GetTasksByClientId(s.Id)
+	if err == nil {
+		num += len(tasks)
+	}
 
-	GetDb().JsonDb.Hosts.Range(func(key, value interface{}) bool {
-		v := value.(*Host)
-		if v.Client.Id == s.Id {
-			num++
-		}
-		return true
-	})
+	hosts, err := GetDb().GetHostsByClientId(s.Id)
+	if err == nil {
+		num += len(hosts)
+	}
 	return
 }
 
 func (s *Client) HasHost(h *Host) bool {
-	var has bool
-	GetDb().JsonDb.Hosts.Range(func(key, value interface{}) bool {
-		v := value.(*Host)
-		if v.Client.Id == s.Id && v.Host == h.Host && h.Location == v.Location {
-			has = true
-			return false
+	hosts, err := GetDb().GetHostsByClientId(s.Id)
+	if err != nil {
+		return false
+	}
+	for _, v := range hosts {
+		if v.Host == h.Host && h.Location == v.Location {
+			return true
 		}
-		return true
-	})
-	return has
+	}
+	return false
 }
 
 type Tunnel struct {

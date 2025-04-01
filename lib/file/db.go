@@ -504,6 +504,44 @@ func (s *DbUtils) GetAllHosts() ([]*Host, error) {
 	return hosts, nil
 }
 
+func (s *DbUtils) GetTasksByClientId(clientId int) ([]*Tunnel, error) {
+	query := "SELECT id, port, mode, status, password, remark FROM tasks WHERE status = 1 AND client_id = ?"
+	rows, err := s.SqlDB.Query(query, clientId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tasks []*Tunnel
+	for rows.Next() {
+		var t Tunnel
+		if err := rows.Scan(&t.Id, &t.Port, &t.Mode, &t.Status, &t.Password, &t.Remark); err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, &t)
+	}
+	return tasks, nil
+}
+
+func (s *DbUtils) GetHostsByClientId(clientId int) ([]*Host, error) {
+	query := "SELECT id, host, location, scheme, remark FROM hosts WHERE status = 1 AND client_id = ?"
+	rows, err := s.SqlDB.Query(query, clientId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var hosts []*Host
+	for rows.Next() {
+		var h Host
+		if err := rows.Scan(&h.Id, &h.Host, &h.Location, &h.Scheme, &h.Remark); err != nil {
+			return nil, err
+		}
+		hosts = append(hosts, &h)
+	}
+	return hosts, nil
+}
+
 // GetClientIdByVkey 根据 verify_key 的 MD5 值获取客户端 ID
 func (s *DbUtils) GetClientIdByVkey(vkey string) (int, error) {
 	query := "SELECT id FROM clients WHERE MD5(verify_key) = ? LIMIT 1"
