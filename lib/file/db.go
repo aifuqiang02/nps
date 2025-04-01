@@ -564,6 +564,24 @@ func (s *DbUtils) GetHostById(id int) (*Host, error) {
 	return &h, nil
 }
 
+func (s *DbUtils) UpdateHost(h *Host) error {
+	query := "UPDATE hosts SET host = ?, location = ?, scheme = ?, remark = ?, target_str = ?, health_remove_arr = ? WHERE id = ?"
+	fmt.Println("SQL Exec:", query, "with parameters:", h.Host, h.Location, h.Scheme, h.Remark, h.Target.TargetStr, strings.Join(h.HealthRemoveArr, ","), h.Id)
+
+	tx, err := s.SqlDB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec(query, h.Host, h.Location, h.Scheme, h.Remark, h.Target.TargetStr, strings.Join(h.HealthRemoveArr, ","), h.Id)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
 // GetInfoByHost 根据请求中的 host 与 URL 信息返回匹配的 host 记录
 func (s *DbUtils) GetInfoByHost(host string, r *http.Request) (*Host, error) {
 	ip := common.GetIpByAddr(host)

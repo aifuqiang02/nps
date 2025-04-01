@@ -3,7 +3,6 @@ package bridge
 import (
 	"crypto/tls"
 	_ "crypto/tls"
-	"ehang.io/nps/lib/nps_mux"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -13,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"ehang.io/nps/lib/nps_mux"
 
 	"ehang.io/nps/lib/common"
 	"ehang.io/nps/lib/conn"
@@ -121,60 +122,76 @@ func (s *Bridge) GetHealthFromClient(id int, c *conn.Conn) {
 		if info, status, err := c.GetHealthInfo(); err != nil {
 			break
 		} else if !status { //the status is true , return target to the targetArr
-			file.GetDb().JsonDb.Tasks.Range(func(key, value interface{}) bool {
-				v := value.(*file.Tunnel)
-				if v.Client.Id == id && v.Mode == "tcp" && strings.Contains(v.Target.TargetStr, info) {
-					v.Lock()
-					if v.Target.TargetArr == nil || (len(v.Target.TargetArr) == 0 && len(v.HealthRemoveArr) == 0) {
-						v.Target.TargetArr = common.TrimArr(strings.Split(v.Target.TargetStr, "\n"))
+			tasks, err := file.GetDb().GetTasksByClientId(id)
+			if err == nil {
+				for _, v := range tasks {
+					if v.Mode == "tcp" && strings.Contains(v.Target.TargetStr, info) {
+						v.Lock()
+						if v.Target.TargetArr == nil || (len(v.Target.TargetArr) == 0 && len(v.HealthRemoveArr) == 0) {
+							v.Target.TargetArr = common.TrimArr(strings.Split(v.Target.TargetStr, "\n"))
+						}
+						v.Target.TargetArr = common.RemoveArrVal(v.Target.TargetArr, info)
+						if v.HealthRemoveArr == nil {
+							v.HealthRemoveArr = make([]string, 0)
+						}
+						v.HealthRemoveArr = append(v.HealthRemoveArr, info)
+						if err := file.GetDb().UpdateTask(v); err != nil {
+							logs.Error("Update task error:", err)
+						}
+						v.Unlock()
 					}
-					v.Target.TargetArr = common.RemoveArrVal(v.Target.TargetArr, info)
-					if v.HealthRemoveArr == nil {
-						v.HealthRemoveArr = make([]string, 0)
-					}
-					v.HealthRemoveArr = append(v.HealthRemoveArr, info)
-					v.Unlock()
 				}
-				return true
-			})
-			file.GetDb().JsonDb.Hosts.Range(func(key, value interface{}) bool {
-				v := value.(*file.Host)
-				if v.Client.Id == id && strings.Contains(v.Target.TargetStr, info) {
-					v.Lock()
-					if v.Target.TargetArr == nil || (len(v.Target.TargetArr) == 0 && len(v.HealthRemoveArr) == 0) {
-						v.Target.TargetArr = common.TrimArr(strings.Split(v.Target.TargetStr, "\n"))
+			}
+			hosts, err := file.GetDb().GetHostsByClientId(id)
+			if err == nil {
+				for _, v := range hosts {
+					if strings.Contains(v.Target.TargetStr, info) {
+						v.Lock()
+						if v.Target.TargetArr == nil || (len(v.Target.TargetArr) == 0 && len(v.HealthRemoveArr) == 0) {
+							v.Target.TargetArr = common.TrimArr(strings.Split(v.Target.TargetStr, "\n"))
+						}
+						v.Target.TargetArr = common.RemoveArrVal(v.Target.TargetArr, info)
+						if v.HealthRemoveArr == nil {
+							v.HealthRemoveArr = make([]string, 0)
+						}
+						v.HealthRemoveArr = append(v.HealthRemoveArr, info)
+						if err := file.GetDb().UpdateHost(v); err != nil {
+							logs.Error("Update host error:", err)
+						}
+						v.Unlock()
 					}
-					v.Target.TargetArr = common.RemoveArrVal(v.Target.TargetArr, info)
-					if v.HealthRemoveArr == nil {
-						v.HealthRemoveArr = make([]string, 0)
-					}
-					v.HealthRemoveArr = append(v.HealthRemoveArr, info)
-					v.Unlock()
 				}
-				return true
-			})
+			}
 		} else { //the status is false,remove target from the targetArr
-			file.GetDb().JsonDb.Tasks.Range(func(key, value interface{}) bool {
-				v := value.(*file.Tunnel)
-				if v.Client.Id == id && v.Mode == "tcp" && common.IsArrContains(v.HealthRemoveArr, info) && !common.IsArrContains(v.Target.TargetArr, info) {
-					v.Lock()
-					v.Target.TargetArr = append(v.Target.TargetArr, info)
-					v.HealthRemoveArr = common.RemoveArrVal(v.HealthRemoveArr, info)
-					v.Unlock()
+			tasks, err := file.GetDb().GetTasksByClientId(id)
+			if err == nil {
+				for _, v := range tasks {
+					if v.Mode == "tcp" && common.IsArrContains(v.HealthRemoveArr, info) && !common.IsArrContains(v.Target.TargetArr, info) {
+						v.Lock()
+						v.Target.TargetArr = append(v.Target.TargetArr, info)
+						v.HealthRemoveArr = common.RemoveArrVal(v.HealthRemoveArr, info)
+						if err := file.GetDb().UpdateTask(v); err != nil {
+							logs.Error("Update task error:", err)
+						}
+						v.Unlock()
+					}
 				}
-				return true
-			})
+			}
 
-			file.GetDb().JsonDb.Hosts.Range(func(key, value interface{}) bool {
-				v := value.(*file.Host)
-				if v.Client.Id == id && common.IsArrContains(v.HealthRemoveArr, info) && !common.IsArrContains(v.Target.TargetArr, info) {
-					v.Lock()
-					v.Target.TargetArr = append(v.Target.TargetArr, info)
-					v.HealthRemoveArr = common.RemoveArrVal(v.HealthRemoveArr, info)
-					v.Unlock()
+			hosts, err := file.GetDb().GetHostsByClientId(id)
+			if err == nil {
+				for _, v := range hosts {
+					if common.IsArrContains(v.HealthRemoveArr, info) && !common.IsArrContains(v.Target.TargetArr, info) {
+						v.Lock()
+						v.Target.TargetArr = append(v.Target.TargetArr, info)
+						v.HealthRemoveArr = common.RemoveArrVal(v.HealthRemoveArr, info)
+						if err := file.GetDb().UpdateHost(v); err != nil {
+							logs.Error("Update host error:", err)
+						}
+						v.Unlock()
+					}
 				}
-				return true
-			})
+			}
 		}
 	}
 	s.DelClient(id)
@@ -432,21 +449,20 @@ loop:
 				if err != nil {
 					break loop
 				}
-				file.GetDb().JsonDb.Hosts.Range(func(key, value interface{}) bool {
-					v := value.(*file.Host)
-					if v.Client.Id == id {
+				hosts, err := file.GetDb().GetHostsByClientId(id)
+				if err == nil {
+					for _, v := range hosts {
 						str += v.Remark + common.CONN_DATA_SEQ
 					}
-					return true
-				})
-				file.GetDb().JsonDb.Tasks.Range(func(key, value interface{}) bool {
-					v := value.(*file.Tunnel)
-					//if _, ok := s.runList[v.Id]; ok && v.Client.Id == id {
-					if _, ok := s.runList.Load(v.Id); ok && v.Client.Id == id {
-						str += v.Remark + common.CONN_DATA_SEQ
+				}
+				tasks, err := file.GetDb().GetTasksByClientId(id)
+				if err == nil {
+					for _, v := range tasks {
+						if _, ok := s.runList.Load(v.Id); ok {
+							str += v.Remark + common.CONN_DATA_SEQ
+						}
 					}
-					return true
-				})
+				}
 				binary.Write(c, binary.LittleEndian, int32(len([]byte(str))))
 				binary.Write(c, binary.LittleEndian, []byte(str))
 			}
