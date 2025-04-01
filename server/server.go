@@ -67,8 +67,8 @@ func DealBridgeTask() {
 			StopServer(t.Id)
 		case id := <-Bridge.CloseClient:
 			DelTunnelAndHostByClientId(id, true)
-			if v, ok := file.GetDb().JsonDb.Clients.Load(id); ok {
-				if v.(*file.Client).NoStore {
+			if client, err := file.GetDb().GetClient(id); err == nil {
+				if client.NoStore {
 					file.GetDb().DelClient(id)
 				}
 			}
