@@ -14,6 +14,8 @@ import (
 	"ehang.io/nps/lib/file"
 	"ehang.io/nps/server"
 	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/logs"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 type BaseController struct {
@@ -29,8 +31,20 @@ func (s *BaseController) Prepare() {
 	s.controllerName = strings.ToLower(controllerName[0 : len(controllerName)-10])
 	s.actionName = strings.ToLower(actionName)
 	// web api verify
-	// param 1 is md5(authKey+Current timestamp)
-	// param 2 is timestamp (It's limited to 20 seconds.)
+	// support both token and session auth
+	authToken := s.Ctx.Input.Header("Authorization")
+	if authToken != "" && strings.HasPrefix(authToken, "Bearer ") {
+		token := strings.TrimPrefix(authToken, "Bearer ")
+		if isValidToken(token, s) {
+			s.SetSession("isAdmin", true)
+			s.Data["isAdmin"] = true
+			// Set common configs for both token and session auth
+			s.setCommonConfigs()
+			return
+		}
+	}
+
+	// check old auth method
 	md5Key := s.getEscapeString("auth_key")
 	timestamp := s.GetIntNoErr("timestamp")
 	configKey := beego.AppConfig.String("auth_key")
@@ -68,6 +82,57 @@ func (s *BaseController) Prepare() {
 }
 
 // 加载模板
+// isValidToken validates JWT token
+func isValidToken(token string, s *BaseController) bool {
+	// Use auth_key from config as JWT secret
+	secret := beego.AppConfig.String("auth_key")
+	if secret == "" {
+		secret = crypt.GetRandomString(64)
+	}
+
+	// Parse and validate the token
+	parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, jwt.ErrSignatureInvalid
+		}
+		return []byte(secret), nil
+	})
+
+	if err != nil {
+		logs.Error("Token validation failed:", err)
+		return false
+	}
+
+	if claims, ok := parsedToken.Claims.(jwt.MapClaims); ok && parsedToken.Valid {
+		// Check token expiration
+		if exp, ok := claims["exp"].(float64); ok {
+			if time.Now().Unix() > int64(exp) {
+				logs.Error("Token expired")
+				return false
+			}
+		}
+		s.Data["username"] = claims["username"]
+		s.SetSession("username", claims["username"])
+		return true
+	}
+
+	return false
+}
+
+// setCommonConfigs sets common configuration values for both token and session auth
+func (s *BaseController) setCommonConfigs() {
+	s.Data["https_just_proxy"], _ = beego.AppConfig.Bool("https_just_proxy")
+	s.Data["allow_user_login"], _ = beego.AppConfig.Bool("allow_user_login")
+	s.Data["allow_flow_limit"], _ = beego.AppConfig.Bool("allow_flow_limit")
+	s.Data["allow_rate_limit"], _ = beego.AppConfig.Bool("allow_rate_limit")
+	s.Data["allow_connection_num_limit"], _ = beego.AppConfig.Bool("allow_connection_num_limit")
+	s.Data["allow_multi_ip"], _ = beego.AppConfig.Bool("allow_multi_ip")
+	s.Data["system_info_display"], _ = beego.AppConfig.Bool("system_info_display")
+	s.Data["allow_tunnel_num_limit"], _ = beego.AppConfig.Bool("allow_tunnel_num_limit")
+	s.Data["allow_local_proxy"], _ = beego.AppConfig.Bool("allow_local_proxy")
+	s.Data["allow_user_change_username"], _ = beego.AppConfig.Bool("allow_user_change_username")
+}
+
 func (s *BaseController) display(tpl ...string) {
 	s.Data["web_base_url"] = beego.AppConfig.String("web_base_url")
 	var tplname string

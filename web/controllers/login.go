@@ -9,8 +9,10 @@ import (
 	"github.com/astaxie/beego/cache"
 	"github.com/astaxie/beego/logs"
 	"github.com/astaxie/beego/utils/captcha"
+	"github.com/golang-jwt/jwt/v4"
 
 	"ehang.io/nps/lib/common"
+	"ehang.io/nps/lib/crypt"
 	"ehang.io/nps/lib/file"
 	"ehang.io/nps/server"
 	"github.com/astaxie/beego"
@@ -57,7 +59,8 @@ func (self *LoginController) Verify() {
 		}
 	}
 	if self.doLogin(username, password, true) {
-		self.Data["json"] = map[string]interface{}{"status": 1, "msg": "login success"}
+		token := generateToken(username)
+		self.Data["json"] = map[string]interface{}{"status": 1, "msg": "login success", "token": token}
 	} else {
 		self.Data["json"] = map[string]interface{}{"status": 0, "msg": "username or password incorrect"}
 	}
@@ -162,6 +165,29 @@ func (self *LoginController) Register() {
 func (self *LoginController) Out() {
 	self.SetSession("auth", false)
 	self.Redirect(beego.AppConfig.String("web_base_url")+"/login/index", 302)
+}
+
+// generateToken creates a JWT token for the user
+func generateToken(username string) string {
+	// Use auth_key from config as JWT secret
+	secret := beego.AppConfig.String("auth_key")
+	if secret == "" {
+		secret = crypt.GetRandomString(64)
+	}
+
+	// Create token with 24h expiration
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"username": username,
+		"exp":      time.Now().Add(time.Hour * 24).Unix(),
+	})
+
+	// Sign and get the complete encoded token as a string
+	tokenString, err := token.SignedString([]byte(secret))
+	if err != nil {
+		logs.Error("Failed to generate token:", err)
+		return ""
+	}
+	return tokenString
 }
 
 func clearIprecord() {
