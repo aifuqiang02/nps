@@ -485,6 +485,25 @@ func (s *DbUtils) GetAllClients() ([]*Client, error) {
 	return clients, nil
 }
 
+func (s *DbUtils) GetAllHosts() ([]*Host, error) {
+	query := "SELECT id, host, location, scheme, remark, client_id, no_store FROM hosts WHERE status = 1"
+	rows, err := s.SqlDB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var hosts []*Host
+	for rows.Next() {
+		var h Host
+		if err := rows.Scan(&h.Id, &h.Host, &h.Location, &h.Scheme, &h.Remark, &h.Client.Id, &h.NoStore); err != nil {
+			return nil, err
+		}
+		hosts = append(hosts, &h)
+	}
+	return hosts, nil
+}
+
 // GetClientIdByVkey 根据 verify_key 的 MD5 值获取客户端 ID
 func (s *DbUtils) GetClientIdByVkey(vkey string) (int, error) {
 	query := "SELECT id FROM clients WHERE MD5(verify_key) = ? LIMIT 1"

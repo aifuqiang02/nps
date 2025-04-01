@@ -355,30 +355,36 @@ func dealClientData() {
 // delete all host and tasks by client id
 func DelTunnelAndHostByClientId(clientId int, justDelNoStore bool) {
 	var ids []int
-	file.GetDb().JsonDb.Tasks.Range(func(key, value interface{}) bool {
-		v := value.(*file.Tunnel)
+	tasks, err := file.GetDb().GetAllTasks()
+	if err != nil {
+		logs.Error("Failed to get tasks for client deletion:", err)
+		return
+	}
+	for _, v := range tasks {
 		if justDelNoStore && !v.NoStore {
-			return true
+			continue
 		}
 		if v.Client.Id == clientId {
 			ids = append(ids, v.Id)
 		}
-		return true
-	})
+	}
 	for _, id := range ids {
 		DelTask(id)
 	}
 	ids = ids[:0]
-	file.GetDb().JsonDb.Hosts.Range(func(key, value interface{}) bool {
-		v := value.(*file.Host)
+	hosts, err := file.GetDb().GetAllHosts()
+	if err != nil {
+		logs.Error("Failed to get hosts for client deletion:", err)
+		return
+	}
+	for _, v := range hosts {
 		if justDelNoStore && !v.NoStore {
-			return true
+			continue
 		}
 		if v.Client.Id == clientId {
 			ids = append(ids, v.Id)
 		}
-		return true
-	})
+	}
 	for _, id := range ids {
 		file.GetDb().DelHost(id)
 	}
