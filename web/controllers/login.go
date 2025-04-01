@@ -1,12 +1,13 @@
 package controllers
 
 import (
-	"github.com/astaxie/beego/cache"
-	"github.com/astaxie/beego/utils/captcha"
 	"math/rand"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/astaxie/beego/cache"
+	"github.com/astaxie/beego/utils/captcha"
 
 	"ehang.io/nps/lib/common"
 	"ehang.io/nps/lib/file"
@@ -84,29 +85,39 @@ func (self *LoginController) doLogin(username, password string, explicit bool) b
 	}
 	b, err := beego.AppConfig.Bool("allow_user_login")
 	if err == nil && b && !auth {
-		file.GetDb().JsonDb.Clients.Range(func(key, value interface{}) bool {
-			v := value.(*file.Client)
-			if !v.Status || v.NoDisplay {
-				return true
+		// Query client from MySQL with debug logging
+		query := "SELECT id, web_user_name, verify_key, web_password FROM clients WHERE status = 1 AND no_display = 0 AND (web_user_name = ? OR (web_user_name = '' AND verify_key = ?))"
+		beego.Info("Executing SQL query:", query, "with params:", username, password)
+		rows, err := file.GetDb().SqlDB.Query(query, username, password)
+		if err != nil {
+			beego.Error("SQL query error:", err)
+			return false
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id int
+			var webUserName, verifyKey, webPassword string
+			if err := rows.Scan(&id, &webUserName, &verifyKey, &webPassword); err != nil {
+				beego.Error("Row scan error:", err)
+				continue
 			}
-			if v.WebUserName == "" && v.WebPassword == "" {
-				if username != "user" || v.VerifyKey != password {
-					return true
-				} else {
+			beego.Debug("Found client:", id, webUserName)
+			// Check credentials
+			if webUserName == "" {
+				if username == "user" && verifyKey == password {
 					auth = true
 				}
-			}
-			if !auth && v.WebPassword == password && v.WebUserName == username {
+			} else if webUserName == username && (verifyKey == password || webPassword == password) {
 				auth = true
 			}
+
 			if auth {
 				self.SetSession("isAdmin", false)
-				self.SetSession("clientId", v.Id)
-				self.SetSession("username", v.WebUserName)
-				return false
+				self.SetSession("clientId", id)
+				self.SetSession("username", webUserName)
+				break
 			}
-			return true
-		})
+		}
 	}
 	if auth {
 		self.SetSession("auth", true)
