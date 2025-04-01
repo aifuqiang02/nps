@@ -418,6 +418,14 @@ func (s *DbUtils) GetGlobal() *Glob {
 	return &Glob{}
 }
 
+// GetNewClientId 获取新的客户端ID
+func (s *DbUtils) GetNewClientId() int {
+	query := "SELECT IFNULL(MAX(id), 0) + 1 FROM clients"
+	var id int
+	s.SqlDB.QueryRow(query).Scan(&id)
+	return id
+}
+
 // GetClientIdByVkey 根据 verify_key 的 MD5 值获取客户端 ID
 func (s *DbUtils) GetClientIdByVkey(vkey string) (int, error) {
 	query := "SELECT id FROM clients WHERE MD5(verify_key) = ? LIMIT 1"

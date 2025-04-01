@@ -149,7 +149,7 @@ func (self *LoginController) Register() {
 			return
 		}
 		t := &file.Client{
-			Id:          int(file.GetDb().JsonDb.GetClientId()),
+			Id:          int(file.GetDb().GetNewClientId()),
 			Status:      true,
 			Cnf:         &file.Config{},
 			WebUserName: self.GetString("username"),
