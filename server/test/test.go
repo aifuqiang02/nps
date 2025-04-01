@@ -13,16 +13,17 @@ import (
 func TestServerConfig() {
 	var postTcpArr []int
 	var postUdpArr []int
-	file.GetDb().JsonDb.Tasks.Range(func(key, value interface{}) bool {
-		v := value.(*file.Tunnel)
+	tasks, err := file.GetDb().GetAllTasks()
+	if err != nil {
+		log.Fatalln("Get tasks error:", err)
+	}
+	for _, v := range tasks {
 		if v.Mode == "udp" {
 			isInArr(&postUdpArr, v.Port, v.Remark, "udp")
 		} else if v.Port != 0 {
-
 			isInArr(&postTcpArr, v.Port, v.Remark, "tcp")
 		}
-		return true
-	})
+	}
 	p, err := beego.AppConfig.Int("web_port")
 	if err != nil {
 		log.Fatalln("Getting web management port error :", err)
