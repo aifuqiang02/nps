@@ -250,17 +250,18 @@ func GetTunnel(start, length int, typeVal string, clientId int, search string, s
 	all_list := make([]*file.Tunnel, 0) // store all Tunnel
 	list := make([]*file.Tunnel, 0)
 	var cnt int
-	keys := file.GetMapKeys(file.GetDb().JsonDb.Tasks, false, "", "")
+	tasks, err := file.GetDb().GetAllTasks()
+	if err != nil {
+		logs.Error("Failed to get tasks:", err)
+		return nil, 0
+	}
 
-	// get all Tunnel and sort
-	for _, key := range keys {
-		if value, ok := file.GetDb().JsonDb.Tasks.Load(key); ok {
-			v := value.(*file.Tunnel)
-			if (typeVal != "" && v.Mode != typeVal || (clientId != 0 && v.Client.Id != clientId)) || (typeVal == "" && clientId != v.Client.Id) {
-				continue
-			}
-			all_list = append(all_list, v)
+	// filter tasks
+	for _, v := range tasks {
+		if (typeVal != "" && v.Mode != typeVal || (clientId != 0 && v.Client.Id != clientId)) || (typeVal == "" && clientId != v.Client.Id) {
+			continue
 		}
+		all_list = append(all_list, v)
 	}
 	// sort by Id, Remark, TargetStr, Port, asc or desc
 	if sortField == "Id" {
@@ -296,30 +297,27 @@ func GetTunnel(start, length int, typeVal string, clientId int, search string, s
 	}
 
 	// search
-	for _, key := range all_list {
-		if value, ok := file.GetDb().JsonDb.Tasks.Load(key.Id); ok {
-			v := value.(*file.Tunnel)
-			if (typeVal != "" && v.Mode != typeVal || (clientId != 0 && v.Client.Id != clientId)) || (typeVal == "" && clientId != v.Client.Id) {
-				continue
-			}
-			if search != "" && !(v.Id == common.GetIntNoErrByStr(search) || v.Port == common.GetIntNoErrByStr(search) || strings.Contains(v.Password, search) || strings.Contains(v.Remark, search) || strings.Contains(v.Target.TargetStr, search)) {
-				continue
-			}
-			cnt++
-			if _, ok := Bridge.Client.Load(v.Client.Id); ok {
-				v.Client.IsConnect = true
-			} else {
-				v.Client.IsConnect = false
-			}
-			if start--; start < 0 {
-				if length--; length >= 0 {
-					if _, ok := RunList.Load(v.Id); ok {
-						v.RunStatus = true
-					} else {
-						v.RunStatus = false
-					}
-					list = append(list, v)
+	for _, v := range all_list {
+		if (typeVal != "" && v.Mode != typeVal || (clientId != 0 && v.Client.Id != clientId)) || (typeVal == "" && clientId != v.Client.Id) {
+			continue
+		}
+		if search != "" && !(v.Id == common.GetIntNoErrByStr(search) || v.Port == common.GetIntNoErrByStr(search) || strings.Contains(v.Password, search) || strings.Contains(v.Remark, search) || strings.Contains(v.Target.TargetStr, search)) {
+			continue
+		}
+		cnt++
+		if _, ok := Bridge.Client.Load(v.Client.Id); ok {
+			v.Client.IsConnect = true
+		} else {
+			v.Client.IsConnect = false
+		}
+		if start--; start < 0 {
+			if length--; length >= 0 {
+				if _, ok := RunList.Load(v.Id); ok {
+					v.RunStatus = true
+				} else {
+					v.RunStatus = false
 				}
+				list = append(list, v)
 			}
 		}
 	}
@@ -398,8 +396,21 @@ func DelClientConnect(clientId int) {
 func GetDashboardData() map[string]interface{} {
 	data := make(map[string]interface{})
 	data["version"] = version.VERSION
-	data["hostCount"] = common.GeSynctMapLen(file.GetDb().JsonDb.Hosts)
-	data["clientCount"] = common.GeSynctMapLen(file.GetDb().JsonDb.Clients)
+	hosts, err := file.GetDb().GetAllHosts()
+	if err != nil {
+		logs.Error("Failed to get hosts count:", err)
+		data["hostCount"] = 0
+	} else {
+		data["hostCount"] = len(hosts)
+	}
+
+	allClients, err := file.GetDb().GetAllClients()
+	if err != nil {
+		logs.Error("Failed to get clients count:", err)
+		data["clientCount"] = 0
+	} else {
+		data["clientCount"] = len(allClients)
+	}
 	if beego.AppConfig.String("public_vkey") != "" { // remove public vkey
 		data["clientCount"] = data["clientCount"].(int) - 1
 	}
@@ -422,23 +433,25 @@ func GetDashboardData() map[string]interface{} {
 	data["inletFlowCount"] = int(in)
 	data["exportFlowCount"] = int(out)
 	var tcp, udp, secret, socks5, p2p, http int
-	file.GetDb().JsonDb.Tasks.Range(func(key, value interface{}) bool {
-		switch value.(*file.Tunnel).Mode {
-		case "tcp":
-			tcp++
-		case "socks5":
-			socks5++
-		case "httpProxy":
-			http++
-		case "udp":
-			udp++
-		case "p2p":
-			p2p++
-		case "secret":
-			secret++
+	tasks, err := file.GetDb().GetAllTasks()
+	if err == nil {
+		for _, t := range tasks {
+			switch t.Mode {
+			case "tcp":
+				tcp++
+			case "socks5":
+				socks5++
+			case "httpProxy":
+				http++
+			case "udp":
+				udp++
+			case "p2p":
+				p2p++
+			case "secret":
+				secret++
+			}
 		}
-		return true
-	})
+	}
 	data["tcpC"] = tcp
 	data["udpCount"] = udp
 	data["socks5Count"] = socks5
@@ -454,10 +467,11 @@ func GetDashboardData() map[string]interface{} {
 	data["p2pPort"] = beego.AppConfig.String("p2p_port")
 	data["logLevel"] = beego.AppConfig.String("log_level")
 	tcpCount := 0
-	file.GetDb().JsonDb.Clients.Range(func(key, value interface{}) bool {
-		tcpCount += int(value.(*file.Client).NowConn)
-		return true
-	})
+	if err == nil {
+		for _, c := range allClients {
+			tcpCount += int(c.NowConn)
+		}
+	}
 	data["tcpCount"] = tcpCount
 	cpuPercet, _ := cpu.Percent(0, true)
 	var cpuAll float64
