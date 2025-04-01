@@ -426,6 +426,65 @@ func (s *DbUtils) GetNewClientId() int {
 	return id
 }
 
+// GetNewTaskId 获取新的任务ID
+func (s *DbUtils) GetNewTaskId() int {
+	query := "SELECT IFNULL(MAX(id), 0) + 1 FROM tasks"
+	var id int
+	s.SqlDB.QueryRow(query).Scan(&id)
+	return id
+}
+
+// GetNewHostId 获取新的Host ID
+func (s *DbUtils) GetNewHostId() int {
+	query := "SELECT IFNULL(MAX(id), 0) + 1 FROM hosts"
+	var id int
+	s.SqlDB.QueryRow(query).Scan(&id)
+	return id
+}
+
+func (s *DbUtils) GetAllTasks() ([]*Tunnel, error) {
+	query := "SELECT id, client_id, port, mode, status, password, remark FROM tasks WHERE status = 1"
+	rows, err := s.SqlDB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tasks []*Tunnel
+	for rows.Next() {
+		var t Tunnel
+		if err := rows.Scan(&t.Id, &t.Client.Id, &t.Port, &t.Mode, &t.Status, &t.Password, &t.Remark); err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, &t)
+	}
+	return tasks, nil
+}
+
+func (s *DbUtils) GetAllClients() ([]*Client, error) {
+	query := "SELECT id, verify_key, web_user_name, IFNULL(web_password, ''), rate_limit, remark, no_display FROM clients WHERE status = 1"
+	rows, err := s.SqlDB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var clients []*Client
+	for rows.Next() {
+		var c Client
+		var webPassword string
+		if err := rows.Scan(&c.Id, &c.VerifyKey, &c.WebUserName, &webPassword, &c.RateLimit, &c.Remark, &c.NoDisplay); err != nil {
+			return nil, err
+		}
+		c.WebPassword = webPassword
+		if c.Flow == nil {
+			c.Flow = new(Flow)
+		}
+		clients = append(clients, &c)
+	}
+	return clients, nil
+}
+
 // GetClientIdByVkey 根据 verify_key 的 MD5 值获取客户端 ID
 func (s *DbUtils) GetClientIdByVkey(vkey string) (int, error) {
 	query := "SELECT id FROM clients WHERE MD5(verify_key) = ? LIMIT 1"

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/astaxie/beego/cache"
+	"github.com/astaxie/beego/logs"
 	"github.com/astaxie/beego/utils/captcha"
 
 	"ehang.io/nps/lib/common"
@@ -85,36 +86,29 @@ func (self *LoginController) doLogin(username, password string, explicit bool) b
 	}
 	b, err := beego.AppConfig.Bool("allow_user_login")
 	if err == nil && b && !auth {
-		// Query client from MySQL with debug logging
-		query := "SELECT id, web_user_name, verify_key, web_password FROM clients WHERE status = 1 AND no_display = 0 AND (web_user_name = ? OR (web_user_name = '' AND verify_key = ?))"
-		beego.Info("Executing SQL query:", query, "with params:", username, password)
-		rows, err := file.GetDb().SqlDB.Query(query, username, password)
+		clients, err := file.GetDb().GetAllClients()
 		if err != nil {
-			beego.Error("SQL query error:", err)
+			logs.Error("Failed to get clients from MySQL:", err)
 			return false
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var id int
-			var webUserName, verifyKey, webPassword string
-			if err := rows.Scan(&id, &webUserName, &verifyKey, &webPassword); err != nil {
-				beego.Error("Row scan error:", err)
+		for _, v := range clients {
+			if !v.Status || v.NoDisplay {
 				continue
 			}
-			beego.Debug("Found client:", id, webUserName)
-			// Check credentials
-			if webUserName == "" {
-				if username == "user" && verifyKey == password {
+			if v.WebUserName == "" && v.WebPassword == "" {
+				if username != "user" || v.VerifyKey != password {
+					continue
+				} else {
 					auth = true
 				}
-			} else if webUserName == username && (verifyKey == password || webPassword == password) {
+			}
+			if !auth && v.WebPassword == password && v.WebUserName == username {
 				auth = true
 			}
-
 			if auth {
 				self.SetSession("isAdmin", false)
-				self.SetSession("clientId", id)
-				self.SetSession("username", webUserName)
+				self.SetSession("clientId", v.Id)
+				self.SetSession("username", v.WebUserName)
 				break
 			}
 		}
@@ -123,7 +117,6 @@ func (self *LoginController) doLogin(username, password string, explicit bool) b
 		self.SetSession("auth", true)
 		ipRecord.Delete(ip)
 		return true
-
 	}
 	if v, load := ipRecord.LoadOrStore(ip, &record{hasLoginFailTimes: 1, lastLoginTime: time.Now()}); load && explicit {
 		vv := v.(*record)
@@ -133,6 +126,7 @@ func (self *LoginController) doLogin(username, password string, explicit bool) b
 	}
 	return false
 }
+
 func (self *LoginController) Register() {
 	if self.Ctx.Request.Method == "GET" {
 		self.Data["web_base_url"] = beego.AppConfig.String("web_base_url")

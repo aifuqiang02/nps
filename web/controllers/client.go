@@ -1,13 +1,14 @@
 package controllers
 
 import (
+	"strings"
+	"time"
+
 	"ehang.io/nps/lib/common"
 	"ehang.io/nps/lib/file"
 	"ehang.io/nps/lib/rate"
 	"ehang.io/nps/server"
 	"github.com/astaxie/beego"
-	"strings"
-	"time"
 )
 
 type ClientController struct {
@@ -45,7 +46,7 @@ func (s *ClientController) Add() {
 		s.SetInfo("add client")
 		s.display()
 	} else {
-		id := int(file.GetDb().JsonDb.GetClientId())
+		id := int(file.GetDb().GetNewClientId())
 		t := &file.Client{
 			VerifyKey: s.getEscapeString("vkey"),
 			Id:        id,
@@ -151,7 +152,7 @@ func (s *ClientController) Edit() {
 			}
 
 			c.BlackIpList = RemoveRepeatedElement(strings.Split(s.getEscapeString("blackiplist"), "\r\n"))
-			file.GetDb().JsonDb.StoreClientsToJsonFile()
+			// No need to store to JSON file anymore as we're using MySQL
 		}
 		s.AjaxOk("save success")
 	}

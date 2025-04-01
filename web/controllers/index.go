@@ -92,7 +92,7 @@ func (s *IndexController) Add() {
 		s.SetInfo("add tunnel")
 		s.display()
 	} else {
-		id := int(file.GetDb().JsonDb.GetTaskId())
+		id := int(file.GetDb().GetNewTaskId())
 		t := &file.Tunnel{
 			Port:      s.GetIntNoErr("port"),
 			ServerIp:  s.getEscapeString("server_ip"),
@@ -263,7 +263,7 @@ func (s *IndexController) AddHost() {
 		s.SetInfo("add host")
 		s.display("index/hadd")
 	} else {
-		id := int(file.GetDb().JsonDb.GetHostId())
+		id := int(file.GetDb().GetNewHostId())
 		h := &file.Host{
 			Id:           id,
 			Host:         s.getEscapeString("host"),
@@ -334,7 +334,7 @@ func (s *IndexController) EditHost() {
 			h.CertFilePath = s.getEscapeString("cert_file_path")
 			h.Target.LocalProxy = s.GetBoolNoErr("local_proxy")
 			h.AutoHttps = s.GetBoolNoErr("AutoHttps")
-			file.GetDb().JsonDb.StoreHostToJsonFile()
+			// No need to store to JSON file anymore as we're using MySQL
 		}
 		s.AjaxOk("modified success")
 	}

@@ -44,12 +44,17 @@ func InitFromCsv() {
 		//RunList[c.Id] = nil
 	}
 	// Initialize services in server-side files
-	file.GetDb().JsonDb.Tasks.Range(func(key, value interface{}) bool {
-		if value.(*file.Tunnel).Status {
-			AddTask(value.(*file.Tunnel))
+	// Query all active tasks from MySQL
+	tasks, err := file.GetDb().GetAllTasks()
+	if err != nil {
+		logs.Error("Failed to get tasks from MySQL:", err)
+		return
+	}
+	for _, task := range tasks {
+		if task.Status {
+			AddTask(task)
 		}
-		return true
-	})
+	}
 }
 
 // get bridge command
@@ -329,9 +334,14 @@ func GetClientList(start, length int, search, sort, order string, clientId int) 
 }
 
 func dealClientData() {
-	// logs.Info("dealClientData.........")
-	file.GetDb().JsonDb.Clients.Range(func(key, value interface{}) bool {
-		v := value.(*file.Client)
+	// 获取所有客户端数据
+	clients, err := file.GetDb().GetAllClients()
+	if err != nil {
+		logs.Error("Failed to get clients from MySQL:", err)
+		return
+	}
+
+	for _, v := range clients {
 		if vv, ok := Bridge.Client.Load(v.Id); ok {
 			v.IsConnect = true
 			v.LastOnlineTime = time.Now().Format("2006-01-02 15:04:05")
@@ -339,8 +349,7 @@ func dealClientData() {
 		} else {
 			v.IsConnect = false
 		}
-		return true
-	})
+	}
 }
 
 // delete all host and tasks by client id
@@ -391,15 +400,18 @@ func GetDashboardData() map[string]interface{} {
 	dealClientData()
 	c := 0
 	var in, out int64
-	file.GetDb().JsonDb.Clients.Range(func(key, value interface{}) bool {
-		v := value.(*file.Client)
-		if v.IsConnect {
-			c++
+	clients, err := file.GetDb().GetAllClients()
+	if err != nil {
+		logs.Error("Failed to get clients for dashboard:", err)
+	} else {
+		for _, v := range clients {
+			if v.IsConnect {
+				c++
+			}
+			in += v.Flow.InletFlow
+			out += v.Flow.ExportFlow
 		}
-		in += v.Flow.InletFlow
-		out += v.Flow.ExportFlow
-		return true
-	})
+	}
 	data["clientOnlineCount"] = c
 	data["inletFlowCount"] = int(in)
 	data["exportFlowCount"] = int(out)
