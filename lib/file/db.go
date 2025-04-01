@@ -16,39 +16,9 @@ import (
 	"ehang.io/nps/lib/rate"
 )
 
-// DummyJsonDB 用于兼容旧代码，提供与JSON存储相关的接口，方法均为空实现
-type DummyJsonDB struct {
-	Clients sync.Map
-	Tasks   sync.Map
-	Hosts   sync.Map
-	// 注意：Glob类型应由项目其他文件统一定义，此处不重复声明
-	Global interface{}
-}
-
-func NewDummyJsonDB() *DummyJsonDB {
-	return &DummyJsonDB{}
-}
-
-func (d *DummyJsonDB) LoadClientFromJsonFile() {}
-func (d *DummyJsonDB) LoadTaskFromJsonFile()   {}
-func (d *DummyJsonDB) LoadHostFromJsonFile()   {}
-func (d *DummyJsonDB) LoadGlobalFromJsonFile() {}
-func (d *DummyJsonDB) StoreClientsToJsonFile() {}
-func (d *DummyJsonDB) StoreTasksToJsonFile()   {}
-func (d *DummyJsonDB) StoreHostToJsonFile()    {}
-func (d *DummyJsonDB) StoreGlobalToJsonFile()  {}
-
-// 为兼容外部调用，增加以下方法（均返回0，可按实际需要扩展实现）
-func (d *DummyJsonDB) GetTaskId() int   { return 0 }
-func (d *DummyJsonDB) GetHostId() int   { return 0 }
-func (d *DummyJsonDB) GetClientId() int { return 0 }
-
-// 注意：Client、Tunnel、Host 等类型需在其它文件中定义，此处假设它们已存在并包含所使用的字段
-
-// DbUtils 提供MySQL存储操作，同时保留 JsonDb 字段以兼容旧代码调用
+// DbUtils 提供MySQL存储操作
 type DbUtils struct {
-	SqlDB  *sql.DB
-	JsonDb *DummyJsonDB
+	SqlDB *sql.DB
 }
 
 var (
@@ -72,8 +42,7 @@ func GetDb() *DbUtils {
 		}
 		// 可选：设置数据库连接池参数，例如 db.SetMaxOpenConns(x)
 		Db = &DbUtils{
-			SqlDB:  db,
-			JsonDb: NewDummyJsonDB(), // 用于兼容旧调用
+			SqlDB: db,
 		}
 	})
 	return Db
