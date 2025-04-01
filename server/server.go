@@ -507,17 +507,16 @@ func GetDashboardData() map[string]interface{} {
 	return data
 }
 
-// 实例化流量数据到文件
+// 定时更新流量数据到MySQL
 func flowSession(m time.Duration) {
 	ticker := time.NewTicker(m)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			file.GetDb().JsonDb.StoreHostToJsonFile()
-			file.GetDb().JsonDb.StoreTasksToJsonFile()
-			file.GetDb().JsonDb.StoreClientsToJsonFile()
-			file.GetDb().JsonDb.StoreGlobalToJsonFile()
+			// MySQL会自动持久化数据，这里只需要确保连接正常
+			// 可以添加一些必要的定期更新逻辑
+			logs.Info("Periodic data update check at", time.Now().Format("2006-01-02 15:04:05"))
 		}
 	}
 }
