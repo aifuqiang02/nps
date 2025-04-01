@@ -351,9 +351,9 @@ func (s *DbUtils) NewClient(c *Client) error {
 	if !s.VerifyVkey(c.VerifyKey, c.Id) {
 		return errors.New("Vkey duplicate, please reset")
 	}
-	insertQuery := "INSERT INTO clients (id, verify_key, web_user_name, rate_limit, remark) VALUES (?, ?, ?, ?, ?)"
-	fmt.Println("SQL Exec:", insertQuery, "with parameters:", c.Id, c.VerifyKey, c.WebUserName, c.RateLimit, c.Remark)
-	_, err := s.SqlDB.Exec(insertQuery, c.Id, c.VerifyKey, c.WebUserName, c.RateLimit, c.Remark)
+	insertQuery := "INSERT INTO clients (id, verify_key, web_user_name, web_password, rate_limit, remark) VALUES (?, ?, ?, ?, ?, ?)"
+	fmt.Println("SQL Exec:", insertQuery, "with parameters:", c.Id, c.VerifyKey, c.WebUserName, c.WebPassword, c.RateLimit, c.Remark)
+	_, err := s.SqlDB.Exec(insertQuery, c.Id, c.VerifyKey, c.WebUserName, c.WebPassword, c.RateLimit, c.Remark)
 	return err
 }
 
