@@ -200,51 +200,58 @@ func (s *BaseController) GetBoolNoErr(key string, def ...bool) bool {
 
 // ajax正确返回
 func (s *BaseController) AjaxOk(str string) {
-	s.Data["json"] = ajax(str, 1)
+	s.Data["json"] = ajax(str, 200)
 	s.ServeJSON()
 	s.StopRun()
 }
 
 // ajax正确返回
 func (s *BaseController) AjaxOkWithId(str string, id int) {
-	s.Data["json"] = ajaxWithId(str, 1, id)
+	s.Data["json"] = ajaxWithId(str, 200, id)
 	s.ServeJSON()
 	s.StopRun()
 }
 
 // ajax错误返回
 func (s *BaseController) AjaxErr(str string) {
-	s.Data["json"] = ajax(str, 0)
+	s.Data["json"] = ajax(str, 400)
 	s.ServeJSON()
 	s.StopRun()
 }
 
 // 组装ajax
-func ajax(str string, status int) map[string]interface{} {
+func ajax(str string, code int) map[string]interface{} {
 	json := make(map[string]interface{})
-	json["status"] = status
+	json["code"] = code
 	json["msg"] = str
+	json["data"] = nil
 	return json
 }
 
 // 组装ajax
-func ajaxWithId(str string, status int, id int) map[string]interface{} {
+func ajaxWithId(str string, code int, id int) map[string]interface{} {
 	json := make(map[string]interface{})
-	json["status"] = status
+	json["code"] = code
 	json["msg"] = str
-	json["id"] = id
+	json["data"] = map[string]interface{}{
+		"id": id,
+	}
 	return json
 }
 
 // ajax table返回
 func (s *BaseController) AjaxTable(list interface{}, cnt int, recordsTotal int, kwargs map[string]interface{}) {
 	json := make(map[string]interface{})
-	json["rows"] = list
-	json["total"] = recordsTotal
+	json["code"] = 200
+	json["msg"] = "success"
+	json["data"] = map[string]interface{}{
+		"rows":  list,
+		"total": recordsTotal,
+	}
 	if kwargs != nil {
 		for k, v := range kwargs {
 			if v != nil {
-				json[k] = v
+				json["data"].(map[string]interface{})[k] = v
 			}
 		}
 	}

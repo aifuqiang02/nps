@@ -397,15 +397,33 @@
 </div>
 
 <script>
-    $("#overview_cpu").text("{{.data.cpu}}%")
-    $("#overview_cpu_bar").width("{{.data.cpu}}%")
-    $("#overview_memory").text("{{.data.virtual_mem}}%")
-    $("#overview_memory_bar").width("{{.data.virtual_mem}}%")
-    $.each( JSON.parse({{.data.load}}), function(i, value) { $("#overview_load").append('&emsp;' + value) });
-    $("#overview_tcp").text("{{.data.tcp}}")
-    $("#overview_udp").text("{{.data.udp}}")
-    $("#overview_send").text(changeunit({{.data.io_send}}) + "/s")
-    $("#overview_recv").text(changeunit({{.data.io_recv}}) + "/s")
+    window.nps = { "web_base_url": "{{.web_base_url}}" };
+    
+    function getAuthHeader() {
+        var token = localStorage.getItem('token');
+        return token ? {'Authorization': 'Bearer ' + token} : {};
+    }
+
+    // Initial page load data
+    $(document).ready(function() {
+        $.ajax({
+            url: window.nps.web_base_url + "/index/get_overview",
+            headers: getAuthHeader(),
+            success: function(data) {
+                $("#overview_cpu").text(data.cpu + "%");
+                $("#overview_cpu_bar").width(data.cpu + "%");
+                $("#overview_memory").text(data.virtual_mem + "%");
+                $("#overview_memory_bar").width(data.virtual_mem + "%");
+                $.each(JSON.parse(data.load), function(i, value) { 
+                    $("#overview_load").append('&emsp;' + value);
+                });
+                $("#overview_tcp").text(data.tcp);
+                $("#overview_udp").text(data.udp);
+                $("#overview_send").text(changeunit(data.io_send) + "/s");
+                $("#overview_recv").text(changeunit(data.io_recv) + "/s");
+            }
+        });
+    });
 
 	chartdatas['load'] = {
 		tooltip: {

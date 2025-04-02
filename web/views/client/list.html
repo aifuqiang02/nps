@@ -38,23 +38,29 @@
 </div>
 
 <script>
+    function getAuthHeader() {
+        var token = localStorage.getItem('token');
+        return token ? {'Authorization': 'Bearer ' + token} : {};
+    }
+
     /*bootstrap table*/
     $('#table').bootstrapTable({
         toolbar: "#toolbar",
-        method: 'post', // 服务器数据的请求方式 get or post
-        url: "{{.web_base_url}}/client/list", // 服务器数据的加载地址
+        method: 'post',
+        url: "{{.web_base_url}}/client/list",
         contentType: "application/x-www-form-urlencoded",
-        striped: true, // 设置为true会有隔行变色效果
+        headers: getAuthHeader(),
+        striped: true,
         search: true,
         showHeader: true,
         showColumns: true,
         showRefresh: true,
-        pagination: true,//分页
-        sidePagination: 'server',//服务器端分页
+        pagination: true,
+        sidePagination: 'server',
         pageNumber: 1,
-        pageList: [5, 10, 20, 50],//分页步进值
+        pageList: [5, 10, 20, 50],
         detailView: true,
-        smartDisplay: true, // 智能显示 pagination 和 cardview 等
+        smartDisplay: true,
         onExpandRow: function () {$('body').setLang ('.detail-view');},
         onPostBody: function (data) { if ($(this)[0].locale != undefined ) $('body').setLang ('#table'); },
         detailFormatter: function (index, row, element) {
@@ -74,34 +80,33 @@
                 + '<b langtag="word-createtime"></b>: ' + row.CreateTime + '&emsp;<br/><br/>'
                 + '<b langtag="word-lastonlinetime"></b>: ' + row.LastOnlineTime + '&emsp;<br/><br/>'
                 + '<b langtag="word-quicklycommand"></b>: <span>' + encodeToBase64('{{.ip}}:{{.p}} ' + row.VerifyKey)   + '</span>&emsp;<button class="copy btn btn-info btn-xs" onclick="copyCommand(this)" data-clipboard-text="">复制</button><br/>'
-                + '<b langtag="word-commandclient"></b>: ' + "<code>./npc{{.win}} -server={{.ip}}:{{.p}} -vkey=" + row.VerifyKey + " -type=" +{{.bridgeType}} +"</code><button class=\"copy btn btn-info btn-xs\" onclick=\"copyCommand(this)\" data-clipboard-text=\"\">复制</button><br/>"
-                + '<b langtag="word-commandclient-tls"></b>: ' + "<code>./npc{{.win}} -server={{.ip}}:{{.tls_p}} -vkey=" + row.VerifyKey + " -tls_enable=true</code><button class=\"copy btn btn-info btn-xs\" onclick=\"copyCommand(this)\" data-clipboard-text=\"\">复制</button>"
+                + '<b langtag="word-commandclient"></b>: ' + '<code>./npc' + '{{.win}} -server={{.ip}}:{{.p}} -vkey=' + row.VerifyKey + ' -type=tcp</code><button class="copy btn btn-info btn-xs" onclick="copyCommand(this)" data-clipboard-text="">复制</button><br/>'
+                + '<b langtag="word-commandclient-tls"></b>: ' + '<code>./npc{{.win}} -server={{.ip}}:{{.tls_p}} -vkey=' + row.VerifyKey + ' -tls_enable=true</code><button class="copy btn btn-info btn-xs" onclick="copyCommand(this)" data-clipboard-text="">复制</button>'
         },
-        //表格的列
         columns: [
             {
-                field: 'Id',//域值
-                title: '<span langtag="word-id"></span>',//标题
+                field: 'Id',
+                title: '<span langtag="word-id"></span>',
                 halign: 'center',
-                visible: true//false表示不显示
+                visible: true
             },
             {
-                field: 'Remark',//域值
-                title: '<span langtag="word-remark"></span>',//标题
+                field: 'Remark',
+                title: '<span langtag="word-remark"></span>',
                 halign: 'center',
-                visible: true//false表示不显示
+                visible: true
             },
             {
-                field: 'Version',//域值
-                title: '<span langtag="word-version"></span>',//标题
+                field: 'Version',
+                title: '<span langtag="word-version"></span>',
                 halign: 'center',
-                visible: true//false表示不显示
+                visible: true
             },
             {
-                field: 'VerifyKey',//域值
-                title: '<span langtag="word-verifykey"></span>',//标题
+                field: 'VerifyKey',
+                title: '<span langtag="word-verifykey"></span>',
                 halign: 'center',
-                visible: true,//false表示不显示
+                visible: true,
                 formatter: function (value, row, index) {
                     if (!row.NoStore) {
                         return value
@@ -111,46 +116,46 @@
                 }
             },
             {
-                field: 'Addr',//域值
-                title: '<span langtag="word-address"></span>',//标题
+                field: 'Addr',
+                title: '<span langtag="word-address"></span>',
                 halign: 'center',
-                visible: true//false表示不显示
+                visible: true
             },
             {
-                field: 'InletFlow',//域值
-                title: '<span langtag="word-inletflow"></span>',//标题
+                field: 'InletFlow',
+                title: '<span langtag="word-inletflow"></span>',
                 halign: 'center',
-                visible: true,//false表示不显示
-                sortable: true,//启用排序
+                visible: true,
+                sortable: true,
                 formatter: function (value, row, index) {
                     return changeunit(row.Flow.InletFlow)
                 }
             },
             {
-                field: 'ExportFlow',//域值
-                title: '<span langtag="word-exportflow"></span>',//标题
+                field: 'ExportFlow',
+                title: '<span langtag="word-exportflow"></span>',
                 halign: 'center',
-                visible: true,//false表示不显示
-                sortable: true,//启用排序
+                visible: true,
+                sortable: true,
                 formatter: function (value, row, index) {
                     return changeunit(row.Flow.ExportFlow)
                 }
             },
             {
-                field: 'IsConnect',//域值
-                title: '<span langtag="word-speed"></span>',//内容
+                field: 'IsConnect',
+                title: '<span langtag="word-speed"></span>',
                 halign: 'center',
-                visible: true,//false表示不显示
+                visible: true,
                 formatter: function (value, row, index) {
                     return changeunit(row.NowRate) + "/S"
                 }
             },
             {
-                field: 'Status',//域值
-                title: '<span langtag="word-status"></span>',//内容
+                field: 'Status',
+                title: '<span langtag="word-status"></span>',
                 align: 'center',
                 halign: 'center',
-                visible: true,//false表示不显示
+                visible: true,
                 formatter: function (value, row, index) {
                     if (value) {
                         return '<span class="badge badge-primary" langtag="word-open"></span>'
@@ -160,11 +165,11 @@
                 }
             },
             {
-                field: 'IsConnect',//域值
-                title: '<span langtag="word-connect"></span>',//内容
+                field: 'IsConnect',
+                title: '<span langtag="word-connect"></span>',
                 align: 'center',
                 halign: 'center',
-                visible: true,//false表示不显示
+                visible: true,
                 formatter: function (value, row, index) {
                     if (value) {
                         return '<span class="badge badge-primary" langtag="word-online"></span>'
@@ -174,18 +179,18 @@
                 }
             },
             {
-                field: 'option',//域值
-                title: '<span langtag="word-option"></span>',//内容
+                field: 'option',
+                title: '<span langtag="word-option"></span>',
                 align: 'center',
                 halign: 'center',
-                visible: true,//false表示不显示
+                visible: true,
                 formatter: function (value, row, index) {
                     btn_group = '<div class="btn-group">'
 
                     {{if eq true .isAdmin}}
                     if (row.Status) {
-                        btn_group += '<a onclick="submitform(\'stop\', \'{{.web_base_url}}/client/changestatus\', {\'id\':' + row.Id
-                        btn_group += ', \'status\': 0})" class="btn btn-outline btn-warning"><i class="fa fa-pause"></i></a>'
+                    btn_group += '<a onclick="submitform(\'stop\', \'{{.web_base_url}}/client/changestatus\', {\'id\':' + row.Id
+                    btn_group += ', \'status\': 0})" class="btn btn-outline btn-warning"><i class="fa fa-pause"></i></a>'
                     } else {
                         btn_group += '<a onclick="submitform(\'start\', \'{{.web_base_url}}/client/changestatus\', {\'id\':' + row.Id
                         btn_group += ', \'status\': 1})" class="btn btn-outline btn-primary"><i class="fa fa-play"></i></a>'
@@ -200,11 +205,11 @@
                 }
             },
             {
-                field: 'show',//域值
-                title: '<span langtag="word-show">',//内容
+                field: 'show',
+                title: '<span langtag="word-show">',
                 align: 'center',
                 halign: 'center',
-                visible: true,//false表示不显示
+                visible: true,
                 formatter: function (value, row, index) {
                     return '<div class="btn-group"><a href="{{.web_base_url}}/index/all?client_id=' + row.Id
                         + '" class="btn btn-outline btn-primary" langtag="word-tunnel"></a>'
@@ -215,8 +220,8 @@
         ]
     });
 
-    function encodeToBase64(str){
-        return btoa("nps "+ str);
+    function encodeToBase64(str) {
+        return btoa("nps " + str);
     }
 
     function copyCommand(data) {
@@ -225,15 +230,12 @@
 
     var clipboard = new ClipboardJS('.copy');
     clipboard.on('success', function (e) {
-        // alert("复制成功"+e.text)
         toastr.success('复制成功');
         e.clearSelection();
     });
 
     clipboard.on('error', function (e) {
-        // alert("复制失败")
         toastr.error('复制失败', '提示');
     });
-
 
 </script>

@@ -101,19 +101,31 @@
 
     // Login Page Flipbox control
     function login() {
+        var token = localStorage.getItem('token');
+        var headers = {};
+        
+        if (token) {
+            headers['Authorization'] = 'Bearer ' + token;
+        }
+        
         $.ajax({
             type: "POST",
-            url: "{{.web_base_url}}/login/verify",
+            url: window.nps.web_base_url + "/login/verify",
+            headers: headers,
             data: $("form").serializeArray(),
-            success: function (res) {
+            success: function(res) {
                 if (res.status) {
-                    window.location.href = "{{.web_base_url}}/index/index"
+                    // Store token if returned in response
+                    if (res.token) {
+                        localStorage.setItem('token', res.token);
+                    }
+                    window.location.href = window.nps.web_base_url + "/index/index";
                 } else {
-                    alert(res.msg)
+                    alert(res.msg);
                 }
             }
-        })
-        return false
+        });
+        return false;
     }
 </script>
 </body>

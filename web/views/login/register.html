@@ -1,26 +1,19 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title langtag="title-register"></title>
 
     <!-- Mainly scripts -->
-    <!-- Latest compiled and minified CSS -->
     <link href="{{.web_base_url}}/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="{{.web_base_url}}/static/css/solid.min.css" rel="stylesheet">
     <link href="{{.web_base_url}}/static/css/bootstrap.min.css" rel="stylesheet">
     <link href="{{.web_base_url}}/static/css/style.css" rel="stylesheet">
 
-    <!-- Latest compiled and minified JavaScript -->
     <script src="{{.web_base_url}}/static/js/jquery-3.4.1.min.js"></script>
     <script src="{{.web_base_url}}/static/js/bootstrap.min.js"></script>
-    <!-- Latest compiled and minified Locales -->
     <script src="{{.web_base_url}}/static/js/language.js?v=20250528" type="text/javascript"></script>
-
 </head>
 
 <body class="gray-bg">
@@ -28,12 +21,15 @@
         <nav class="navbar navbar-static-top navbar-right" role="navigation" style="margin: 20px 40px">
             <div></div>
             <span class="btn-group dropdown">
-                <button id="languagemenu" class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fa fa-globe-asia fa-lg"></i><span></span></button>
+                <button id="languagemenu" class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <i class="fa fa-globe-asia fa-lg"></i><span></span>
+                </button>
                 <ul class="dropdown-menu"></ul>
             </span>
         </nav>
     </div>
-    <div class="middle-box text-center loginscreen   animated fadeInDown">
+
+    <div class="middle-box text-center loginscreen animated fadeInDown">
         <div>
             <h1 class="logo-name" langtag="application"></h1>
         </div>
@@ -51,6 +47,7 @@
             <a class="btn btn-sm btn-white btn-block" href="{{.web_base_url}}/login/index" langtag="word-login"></a>
         </form>
     </div>
+
     <hr/>
     <div class="footer">
         <div class="pull-right">
@@ -58,23 +55,32 @@
         </div>
         <div><strong langtag="word-copyright"></strong> <span langtag="application"></span> &copy; 2018-2019</div>
     </div>
+
 <script>
-    window.nps = { "web_base_url": {{.web_base_url}} }
+    window.nps = { "web_base_url": "{{.web_base_url}}" };
+    
     function register() {
+        var token = localStorage.getItem('token');
+        var headers = {};
+        
+        if (token) {
+            headers['Authorization'] = 'Bearer ' + token;
+        }
+        
         $.ajax({
             type: "POST",
-            url: "{{.web_base_url}}/login/register",
+            url: window.nps.web_base_url + "/login/register",
+            headers: headers,
             data: $("form").serializeArray(),
-            success: function (res) {
-                alert(res.msg)
+            success: function(res) {
+                alert(res.msg);
                 if (res.status) {
-                    window.location.href = "{{.web_base_url}}/login/index"
+                    window.location.href = window.nps.web_base_url + "/login/index";
                 }
             }
-        })
-        return false
+        });
+        return false;
     }
 </script>
 </body>
-
 </html>
