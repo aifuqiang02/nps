@@ -114,10 +114,10 @@
             headers: headers,
             data: $("form").serializeArray(),
             success: function(res) {
-                if (res.status) {
+                if (res.code == 200) {
                     // Store token if returned in response
-                    if (res.token) {
-                        localStorage.setItem('token', res.token);
+                    if (res.data) {
+                        localStorage.setItem('token', res.data);
                     }
                     window.location.href = window.nps.web_base_url + "/index/index";
                 } else {
