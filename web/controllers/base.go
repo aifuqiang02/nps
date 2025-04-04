@@ -1,8 +1,10 @@
 package controllers
 
 import (
+	"fmt"
 	"html"
 	"math"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -69,6 +71,18 @@ func (s *BaseController) Prepare() {
 	} else {
 		s.Data["isAdmin"] = true
 	}
+
+	if s.GetSessionIntNoErr("accountId", 0) == 0 && s.GetSession("username") != nil {
+		username := s.GetSession("username").(string)
+		account, err := file.GetDb().GetByUsername(username)
+		if err != nil {
+
+		} else {
+			s.Data["accountId"] = account.Id
+			s.SetSession("accountId", account.Id)
+		}
+	}
+
 	s.Data["https_just_proxy"], _ = beego.AppConfig.Bool("https_just_proxy")
 	s.Data["allow_user_login"], _ = beego.AppConfig.Bool("allow_user_login")
 	s.Data["allow_flow_limit"], _ = beego.AppConfig.Bool("allow_flow_limit")
@@ -188,6 +202,34 @@ func (s *BaseController) GetIntNoErr(key string, def ...int) int {
 	}
 	val, _ := strconv.Atoi(strv)
 	return val
+}
+
+// 去掉没有err返回值的int
+func (s *BaseController) GetSessionIntNoErr(key string, def ...int) int {
+	sessionValue := s.GetSession(key)
+	fmt.Println("GetSessionIntNoErr err:", sessionValue)
+	var myIntValue int
+	var err error
+	fmt.Println("GetSessionIntNoErr unexpected type:", reflect.TypeOf(sessionValue))
+	// 检查 session 中是否存在该值
+	if sessionValue != nil {
+		// 如果存储的是字符串形式，则需要转换
+		switch v := sessionValue.(type) {
+		case int:
+			myIntValue = v
+		case string:
+			myIntValue, err = strconv.Atoi(v)
+		case float64: // 处理可能的浮点数类型
+			myIntValue = int(v)
+		default:
+			fmt.Println("GetSessionIntNoErr unexpected type:", sessionValue)
+			myIntValue = def[0]
+		}
+	} else {
+		myIntValue = def[0]
+		fmt.Println("GetSessionIntNoErr err2:", err)
+	}
+	return myIntValue
 }
 
 // 获取去掉错误的bool值

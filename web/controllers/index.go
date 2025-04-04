@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"fmt"
+
 	"ehang.io/nps/lib/file"
 	"ehang.io/nps/server"
 	"ehang.io/nps/server/tool"
@@ -89,9 +91,9 @@ func (s *IndexController) GetTunnelV2() {
 	start, length := s.GetAjaxParams()
 	taskType := s.getEscapeString("type")
 	clientId := s.GetIntNoErr("client_id")
-
-	var accountId = s.GetSession("accountId").(int)
-
+	fmt.Println("GetTunnelV2 clientId:", clientId)
+	accountId := s.GetSessionIntNoErr("accountId")
+	fmt.Println("GetTunnelV2 accountId:", accountId)
 	list, cnt := server.GetTunnelV2(start, length, taskType, accountId, clientId, s.getEscapeString("search"), s.getEscapeString("sort"), s.getEscapeString("order"))
 	s.AjaxTable(list, cnt, cnt, nil)
 }

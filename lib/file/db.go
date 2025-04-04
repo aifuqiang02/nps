@@ -418,7 +418,7 @@ func (s *DbUtils) GetAllTasks() ([]*Tunnel, error) {
 	var tasks []*Tunnel
 	for rows.Next() {
 		var t Tunnel
-		if err := rows.Scan(&t.Id, &t.Client.Id, &t.Port, &t.Mode, &t.Status, &t.Password, &t.Remark); err != nil {
+		if err := rows.Scan(&t.Id, &t.ClientId, &t.Port, &t.Mode, &t.Status, &t.Password, &t.Remark); err != nil {
 			return nil, err
 		}
 		tasks = append(tasks, &t)
@@ -439,7 +439,7 @@ func (s *DbUtils) GetUserTasks(accountId int) ([]*Tunnel, error) {
 	var tasks []*Tunnel
 	for rows.Next() {
 		var t Tunnel
-		if err := rows.Scan(&t.Id, &t.Client.Id, &t.Port, &t.Mode, &t.Status, &t.Password, &t.Remark); err != nil {
+		if err := rows.Scan(&t.Id, &t.ClientId, &t.Port, &t.Mode, &t.Status, &t.Password, &t.Remark); err != nil {
 			return nil, err
 		}
 		tasks = append(tasks, &t)

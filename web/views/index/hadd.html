@@ -182,6 +182,7 @@
             data: {order: "asc", offset: 0, limit: 999},
             dataType: "json",
             success: function (data) {
+                data = data.data
                 if (data && data.rows.length > 0) {
                     for (var i = 0; i < data.rows.length; i++) {
                         var option = "<option value=\"" + data.rows[i].Id + "\"";

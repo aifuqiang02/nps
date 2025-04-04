@@ -171,6 +171,7 @@ func (s *Client) HasHost(h *Host) bool {
 type Tunnel struct {
 	Id         int
 	AccountId  int
+	ClientId   int
 	Port       int
 	ServerIp   string
 	Mode       string
