@@ -326,6 +326,85 @@ func GetTunnel(start, length int, typeVal string, clientId int, search string, s
 	return list, cnt
 }
 
+// get task list by page num
+func GetTunnelV2(start, length int, typeVal string, accountId int, clientId int, search string, sortField string, order string) ([]*file.Tunnel, int) {
+	all_list := make([]*file.Tunnel, 0) // store all Tunnel
+	list := make([]*file.Tunnel, 0)
+	var cnt int
+	tasks, err := file.GetDb().GetUserTasks(accountId)
+	if err != nil {
+		logs.Error("Failed to get tasks:", err)
+		return nil, 0
+	}
+
+	// filter tasks
+	for _, v := range tasks {
+		if (typeVal != "" && v.Mode != typeVal || (clientId != 0 && v.Client.Id != clientId)) || (typeVal == "" && clientId != v.Client.Id) {
+			continue
+		}
+		all_list = append(all_list, v)
+	}
+	// sort by Id, Remark, TargetStr, Port, asc or desc
+	if sortField == "Id" {
+		if order == "asc" {
+			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Id < all_list[j].Id })
+		} else {
+			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Id > all_list[j].Id })
+		}
+	} else if sortField == "ClientId" {
+		if order == "asc" {
+			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Client.Id < all_list[j].Client.Id })
+		} else {
+			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Client.Id > all_list[j].Client.Id })
+		}
+	} else if sortField == "Remark" {
+		if order == "asc" {
+			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Remark < all_list[j].Remark })
+		} else {
+			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Remark > all_list[j].Remark })
+		}
+	} else if sortField == "Client.VerifyKey" {
+		if order == "asc" {
+			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Client.VerifyKey < all_list[j].Client.VerifyKey })
+		} else {
+			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Client.VerifyKey > all_list[j].Client.VerifyKey })
+		}
+	} else if sortField == "Target" {
+		if order == "asc" {
+			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Target.TargetStr < all_list[j].Target.TargetStr })
+		} else {
+			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Target.TargetStr > all_list[j].Target.TargetStr })
+		}
+	}
+
+	// search
+	for _, v := range all_list {
+		if (typeVal != "" && v.Mode != typeVal || (clientId != 0 && v.Client.Id != clientId)) || (typeVal == "" && clientId != v.Client.Id) {
+			continue
+		}
+		if search != "" && !(v.Id == common.GetIntNoErrByStr(search) || v.Port == common.GetIntNoErrByStr(search) || strings.Contains(v.Password, search) || strings.Contains(v.Remark, search) || strings.Contains(v.Target.TargetStr, search)) {
+			continue
+		}
+		cnt++
+		if _, ok := Bridge.Client.Load(v.Client.Id); ok {
+			v.Client.IsConnect = true
+		} else {
+			v.Client.IsConnect = false
+		}
+		if start--; start < 0 {
+			if length--; length >= 0 {
+				if _, ok := RunList.Load(v.Id); ok {
+					v.RunStatus = true
+				} else {
+					v.RunStatus = false
+				}
+				list = append(list, v)
+			}
+		}
+	}
+	return list, cnt
+}
+
 // get client list
 func GetClientList(start, length int, search, sort, order string, clientId int) (list []*file.Client, cnt int) {
 	list, cnt = file.GetDb().GetClientList(start, length, search, sort, order, clientId)

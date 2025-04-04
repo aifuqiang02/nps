@@ -85,6 +85,17 @@ func (s *IndexController) GetTunnel() {
 	s.AjaxTable(list, cnt, cnt, nil)
 }
 
+func (s *IndexController) GetTunnelV2() {
+	start, length := s.GetAjaxParams()
+	taskType := s.getEscapeString("type")
+	clientId := s.GetIntNoErr("client_id")
+	accountIdInterface := s.GetSession("accountId")
+	var accountId = s.GetSession("accountId").(int)
+	
+	list, cnt := server.GetTunnelV2(start, length, taskType, accountId, clientId, s.getEscapeString("search"), s.getEscapeString("sort"), s.getEscapeString("order"))
+	s.AjaxTable(list, cnt, cnt, nil)
+}
+
 func (s *IndexController) Add() {
 	if s.Ctx.Request.Method == "GET" {
 		s.Data["type"] = s.getEscapeString("type")
@@ -331,11 +342,3 @@ func (s *IndexController) EditHost() {
 			h.Location = s.getEscapeString("location")
 			h.Scheme = s.getEscapeString("scheme")
 			h.KeyFilePath = s.getEscapeString("key_file_path")
-			h.CertFilePath = s.getEscapeString("cert_file_path")
-			h.Target.LocalProxy = s.GetBoolNoErr("local_proxy")
-			h.AutoHttps = s.GetBoolNoErr("AutoHttps")
-			// No need to store to JSON file anymore as we're using MySQL
-		}
-		s.AjaxOk("modified success")
-	}
-}

@@ -169,11 +169,12 @@ func generateToken(username string) string {
 	if secret == "" {
 		secret = crypt.GetRandomString(64)
 	}
-
+	account, err := file.GetDb().GetByUsername(username)
 	// Create token with 24h expiration
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"username": username,
-		"exp":      time.Now().Add(time.Hour * 24).Unix(),
+		"username":  username,
+		"accountId": account.Id,
+		"exp":       time.Now().Add(time.Hour * 24).Unix(),
 	})
 
 	// Sign and get the complete encoded token as a string

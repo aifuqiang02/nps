@@ -426,6 +426,25 @@ func (s *DbUtils) GetAllTasks() ([]*Tunnel, error) {
 	return tasks, nil
 }
 
+func (s *DbUtils) GetUserTasks(accountId int) ([]*Tunnel, error) {
+	query := "SELECT id, client_id, port, mode, status, password, remark FROM tasks WHERE status = 1 and account_id = ?"
+	rows, err := s.SqlDB.Query(query, accountId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tasks []*Tunnel
+	for rows.Next() {
+		var t Tunnel
+		if err := rows.Scan(&t.Id, &t.Client.Id, &t.Port, &t.Mode, &t.Status, &t.Password, &t.Remark); err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, &t)
+	}
+	return tasks, nil
+}
+
 func (s *DbUtils) GetByUsername(username string) (*Account, error) {
 	query := "SELECT id, verify_key, web_user_name, IFNULL(web_password, ''), rate_limit, remark, no_display FROM accounts WHERE status = 1 and web_user_name = ?"
 	var account Account

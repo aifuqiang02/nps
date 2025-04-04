@@ -112,7 +112,9 @@ func isValidToken(token string, s *BaseController) bool {
 			}
 		}
 		s.Data["username"] = claims["username"]
+		s.Data["accountId"] = claims["accountId"]
 		s.SetSession("username", claims["username"])
+		s.SetSession("accountId", claims["accountId"])
 		return true
 	}
 
