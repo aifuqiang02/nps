@@ -43,8 +43,9 @@
         return token ? {'Authorization': 'Bearer ' + token} : {};
     }
 
-    /*bootstrap table*/
-    $('#table').bootstrapTable({
+    // Initialize table after DOM is ready
+    $(document).ready(function() {
+        $('#table').bootstrapTable({
         toolbar: "#toolbar",
         method: 'post',
         url: "{{.web_base_url}}/client/list",
@@ -61,9 +62,13 @@
         pageList: [5, 10, 20, 50],
         detailView: true,
         smartDisplay: true,
-        onExpandRow: function () {$('body').setLang ('.detail-view');},
-        onPostBody: function (data) { if ($(this)[0].locale != undefined ) $('body').setLang ('#table'); },
-        detailFormatter: function (index, row, element) {
+        onExpandRow: function() { $('body').setLang('.detail-view'); },
+        onPostBody: function(data) { 
+            if ($(this)[0].locale !== undefined) {
+                $('body').setLang('#table'); 
+            }
+        },
+        detailFormatter: function(index, row, element) {
             return '<b langtag="word-maxconnections"></b>: ' + row.MaxConn + '&emsp;'
                 + '<b langtag="word-curconnections"></b>: ' + row.NowConn + '&emsp;'
                 + '<b langtag="word-flowlimit"></b>: ' + row.Flow.FlowLimit + 'm&emsp;'
@@ -79,9 +84,9 @@
                 + '<b langtag="word-blackip"></b>: ' + row.BlackIpList + '&emsp;<br/><br/>'
                 + '<b langtag="word-createtime"></b>: ' + row.CreateTime + '&emsp;<br/><br/>'
                 + '<b langtag="word-lastonlinetime"></b>: ' + row.LastOnlineTime + '&emsp;<br/><br/>'
-                + '<b langtag="word-quicklycommand"></b>: <span>' + encodeToBase64('{{.ip}}:{{.p}} ' + row.VerifyKey)   + '</span>&emsp;<button class="copy btn btn-info btn-xs" onclick="copyCommand(this)" data-clipboard-text="">复制</button><br/>'
-                + '<b langtag="word-commandclient"></b>: ' + '<code>./npc' + '{{.win}} -server={{.ip}}:{{.p}} -vkey=' + row.VerifyKey + ' -type=tcp</code><button class="copy btn btn-info btn-xs" onclick="copyCommand(this)" data-clipboard-text="">复制</button><br/>'
-                + '<b langtag="word-commandclient-tls"></b>: ' + '<code>./npc{{.win}} -server={{.ip}}:{{.tls_p}} -vkey=' + row.VerifyKey + ' -tls_enable=true</code><button class="copy btn btn-info btn-xs" onclick="copyCommand(this)" data-clipboard-text="">复制</button>'
+                + '<b langtag="word-quicklycommand"></b>: <span>' + encodeToBase64('{{.ip}}:{{.p}} ' + row.VerifyKey)   + '</span>&emsp;<button class="copy btn btn-info btn-xs" onclick="copyCommand(event)" data-clipboard-text="' + encodeToBase64('{{.ip}}:{{.p}} ' + row.VerifyKey) + '">复制</button><br/>'
+                + '<b langtag="word-commandclient"></b>: ' + '<code>./npc' + '{{.win}} -server={{.ip}}:{{.p}} -vkey=' + row.VerifyKey + ' -type=tcp</code><button class="copy btn btn-info btn-xs" onclick="copyCommand(event)" data-clipboard-text="./npc{{.win}} -server={{.ip}}:{{.p}} -vkey=' + row.VerifyKey + ' -type=tcp">复制</button><br/>'
+                + '<b langtag="word-commandclient-tls"></b>: ' + '<code>./npc{{.win}} -server={{.ip}}:{{.tls_p}} -vkey=' + row.VerifyKey + ' -tls_enable=true</code><button class="copy btn btn-info btn-xs" onclick="copyCommand(event)" data-clipboard-text="./npc{{.win}} -server={{.ip}}:{{.tls_p}} -vkey=' + row.VerifyKey + ' -tls_enable=true">复制</button>'
         },
         columns: [
             {
@@ -107,7 +112,7 @@
                 title: '<span langtag="word-verifykey"></span>',
                 halign: 'center',
                 visible: true,
-                formatter: function (value, row, index) {
+                formatter: function(value, row, index) {
                     if (!row.NoStore) {
                         return value
                     } else {
@@ -127,7 +132,7 @@
                 halign: 'center',
                 visible: true,
                 sortable: true,
-                formatter: function (value, row, index) {
+                formatter: function(value, row, index) {
                     return changeunit(row.Flow.InletFlow)
                 }
             },
@@ -137,7 +142,7 @@
                 halign: 'center',
                 visible: true,
                 sortable: true,
-                formatter: function (value, row, index) {
+                formatter: function(value, row, index) {
                     return changeunit(row.Flow.ExportFlow)
                 }
             },
@@ -146,7 +151,7 @@
                 title: '<span langtag="word-speed"></span>',
                 halign: 'center',
                 visible: true,
-                formatter: function (value, row, index) {
+                formatter: function(value, row, index) {
                     return changeunit(row.NowRate) + "/S"
                 }
             },
@@ -156,7 +161,7 @@
                 align: 'center',
                 halign: 'center',
                 visible: true,
-                formatter: function (value, row, index) {
+                formatter: function(value, row, index) {
                     if (value) {
                         return '<span class="badge badge-primary" langtag="word-open"></span>'
                     } else {
@@ -170,7 +175,7 @@
                 align: 'center',
                 halign: 'center',
                 visible: true,
-                formatter: function (value, row, index) {
+                formatter: function(value, row, index) {
                     if (value) {
                         return '<span class="badge badge-primary" langtag="word-online"></span>'
                     } else {
@@ -184,7 +189,7 @@
                 align: 'center',
                 halign: 'center',
                 visible: true,
-                formatter: function (value, row, index) {
+                formatter: function(value, row, index) {
                     btn_group = '<div class="btn-group">'
 
                     {{if eq true .isAdmin}}
@@ -210,32 +215,43 @@
                 align: 'center',
                 halign: 'center',
                 visible: true,
-                formatter: function (value, row, index) {
+                formatter: function(value, row, index) {
                     return '<div class="btn-group"><a href="{{.web_base_url}}/index/all?client_id=' + row.Id
                         + '" class="btn btn-outline btn-primary" langtag="word-tunnel"></a>'
                         + '<a href="{{.web_base_url}}/index/hostlist?client_id=' + row.Id
                         + '" class="btn btn-outline btn-success" langtag="word-host"></a></div>'
                 }
             }
-        ]
+            ]
+        });
     });
 
     function encodeToBase64(str) {
         return btoa("nps " + str);
     }
 
-    function copyCommand(data) {
-        data.setAttribute("data-clipboard-text", data.previousElementSibling.innerHTML)
+    function copyCommand(event) {
+        event.preventDefault();
+        const button = event.currentTarget;
+        const text = button.getAttribute('data-clipboard-text') || 
+                    button.previousElementSibling.innerText;
+        
+        try {
+            navigator.clipboard.writeText(text).then(function() {
+                toastr.success('复制成功');
+            }).catch(function() {
+                // Fallback for browsers without Clipboard API
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                toastr.success('复制成功');
+            });
+        } catch (err) {
+            toastr.error('复制失败: ' + err.message, '提示');
+        }
     }
-
-    var clipboard = new ClipboardJS('.copy');
-    clipboard.on('success', function (e) {
-        toastr.success('复制成功');
-        e.clearSelection();
-    });
-
-    clipboard.on('error', function (e) {
-        toastr.error('复制失败', '提示');
-    });
 
 </script>

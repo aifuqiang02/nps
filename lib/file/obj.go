@@ -34,6 +34,7 @@ type Config struct {
 type Client struct {
 	Cnf             *Config
 	Id              int        //id
+	AccountId       int        //账号
 	VerifyKey       string     //verify key
 	Addr            string     //the ip of client
 	Remark          string     //remark
@@ -57,6 +58,41 @@ type Client struct {
 	CreateTime      string
 	LastOnlineTime  string
 	sync.RWMutex
+}
+
+type Account struct {
+	Cnf             *Config
+	Id              int        //id
+	Remark          string     //remark
+	Status          bool       //is allow connect
+	RateLimit       int        //rate /kb
+	Flow            *Flow      //flow setting
+	InletFlow       int64      // new field for inlet flow
+	NowRate         int64      // new field for current rate
+	Rate            *rate.Rate //rate limit
+	MaxConn         int        //the max connection num of client allow
+	NowConn         int32      //the connection num of now
+	WebUserName     string     //the username of web login
+	WebPassword     string     //the password of web login
+	ConfigConnAllow bool       //is allow connected by config file
+	MaxTunnelNum    int
+	BlackIpList     []string
+	CreateTime      string
+	LastOnlineTime  string
+	sync.RWMutex
+}
+
+func NewAccount() *Account {
+	return &Account{
+		Cnf:       new(Config),
+		Id:        0,
+		Remark:    "",
+		Status:    true,
+		RateLimit: 0,
+		Flow:      new(Flow),
+		Rate:      nil,
+		RWMutex:   sync.RWMutex{},
+	}
 }
 
 func NewClient(vKey string, noStore bool, noDisplay bool) *Client {
@@ -133,23 +169,34 @@ func (s *Client) HasHost(h *Host) bool {
 }
 
 type Tunnel struct {
-	Id           int
-	Port         int
-	ServerIp     string
-	Mode         string
-	Status       bool
-	RunStatus    bool
-	Client       *Client
-	Ports        string
-	Flow         *Flow
-	Password     string
-	Remark       string
-	TargetAddr   string
-	NoStore      bool
-	IsHttp       bool
-	LocalPath    string
-	StripPre     string
-	Target       *Target
+	Id         int
+	Port       int
+	ServerIp   string
+	Mode       string
+	Status     bool
+	RunStatus  bool
+	Client     *Client
+	Ports      string
+	Flow       *Flow
+	Password   string
+	Remark     string
+	TargetAddr string
+	NoStore    bool
+	IsHttp     bool
+	LocalPath  string
+	StripPre   string
+	Target     *Target
+
+	Host         string //host
+	HeaderChange string //header change
+	HostChange   string //host change
+	Location     string //url router
+	Scheme       string //http https all
+	CertFilePath string
+	KeyFilePath  string
+	IsClose      bool
+	AutoHttps    bool // 自动https
+
 	MultiAccount *MultiAccount
 	Health
 	sync.RWMutex

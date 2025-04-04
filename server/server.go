@@ -38,10 +38,10 @@ func init() {
 func InitFromCsv() {
 	// Add a public password
 	if vkey := beego.AppConfig.String("public_vkey"); vkey != "" {
-		c := file.NewClient(vkey, true, true)
+		c := file.NewAccount()
 		c.WebUserName = beego.AppConfig.String("web_username")
 		c.WebPassword = beego.AppConfig.String("web_password")
-		file.GetDb().NewClient(c)
+		file.GetDb().NewAccount(c)
 		RunList.Store(c.Id, nil)
 		//RunList[c.Id] = nil
 	}

@@ -228,7 +228,7 @@ func (s *DbUtils) GetTask(id int) (*Tunnel, error) {
 
 // DelHost 删除 host 记录
 func (s *DbUtils) DelHost(id int) error {
-	delQuery := "DELETE FROM hosts WHERE id = ?"
+	delQuery := "DELETE FROM tasks WHERE id = ?"
 	fmt.Println("SQL Exec:", delQuery, "with parameter:", id)
 	_, err := s.SqlDB.Exec(delQuery, id)
 	return err
@@ -236,7 +236,7 @@ func (s *DbUtils) DelHost(id int) error {
 
 // IsHostExist 检查 host 是否已存在（排除自身记录）
 func (s *DbUtils) IsHostExist(h *Host) bool {
-	query := "SELECT COUNT(*) FROM hosts WHERE id <> ? AND host = ? AND location = ? AND (scheme = 'all' OR scheme = ?)"
+	query := "SELECT COUNT(*) FROM tasks WHERE id <> ? AND host = ? AND location = ? AND (scheme = 'all' OR scheme = ?)"
 	fmt.Println("SQL Query:", query, "with parameters:", h.Id, h.Host, h.Location, h.Scheme)
 	var count int
 	err := s.SqlDB.QueryRow(query, h.Id, h.Host, h.Location, h.Scheme).Scan(&count)
@@ -254,7 +254,7 @@ func (s *DbUtils) NewHost(t *Host) error {
 	if s.IsHostExist(t) {
 		return errors.New("host has exist")
 	}
-	insertQuery := "INSERT INTO hosts (id, host, location, scheme) VALUES (?, ?, ?, ?)"
+	insertQuery := "INSERT INTO tasks (id, host, location, scheme) VALUES (?, ?, ?, ?)"
 	fmt.Println("SQL Exec:", insertQuery, "with parameters:", t.Id, t.Host, t.Location, t.Scheme)
 	_, err := s.SqlDB.Exec(insertQuery, t.Id, t.Host, t.Location, t.Scheme)
 	return err
@@ -269,13 +269,13 @@ func (s *DbUtils) GetHost(start, length int, id int, search string) ([]*Host, in
 	if id != 0 {
 		where += fmt.Sprintf(" AND client_id = %d", id)
 	}
-	countQuery := "SELECT COUNT(*) FROM hosts " + where
+	countQuery := "SELECT COUNT(*) FROM tasks " + where
 	fmt.Println("SQL Query for count:", countQuery)
 	var cnt int
 	if err := s.SqlDB.QueryRow(countQuery).Scan(&cnt); err != nil {
 		return nil, 0, err
 	}
-	query := fmt.Sprintf("SELECT id, host, location, scheme, remark FROM hosts %s LIMIT %d, %d", where, start, length)
+	query := fmt.Sprintf("SELECT id, host, location, scheme, remark FROM tasks %s LIMIT %d, %d", where, start, length)
 	fmt.Println("SQL Query for data:", query)
 	rows, err := s.SqlDB.Query(query)
 	if err != nil {
@@ -303,10 +303,6 @@ func (s *DbUtils) DelClient(id int) error {
 
 // NewClient 创建新的客户端记录，并进行必要的检测与初始化
 func (s *DbUtils) NewClient(c *Client) error {
-	// 检查 web 登录用户名是否重复
-	if c.WebUserName != "" && !s.VerifyUserName(c.WebUserName, c.Id) {
-		return errors.New("web login username duplicate, please reset")
-	}
 	// 设置 VerifyKey 和 Rate
 	if c.VerifyKey == "" {
 		c.VerifyKey = crypt.GetVkey()
@@ -337,7 +333,7 @@ func (s *DbUtils) VerifyVkey(vkey string, id int) bool {
 
 // VerifyUserName 检查 Web 登录用户名是否唯一
 func (s *DbUtils) VerifyUserName(username string, id int) bool {
-	query := "SELECT COUNT(*) FROM clients WHERE web_user_name = ? AND id <> ?"
+	query := "SELECT COUNT(*) FROM accounts WHERE web_user_name = ? AND id <> ?"
 	fmt.Println("SQL Query:", query, "with parameters:", username, id)
 	var count int
 	s.SqlDB.QueryRow(query, username, id).Scan(&count)
@@ -405,7 +401,7 @@ func (s *DbUtils) GetNewTaskId() int {
 
 // GetNewHostId 获取新的Host ID
 func (s *DbUtils) GetNewHostId() int {
-	query := "SELECT IFNULL(MAX(id), 0) + 1 FROM hosts"
+	query := "SELECT IFNULL(MAX(id), 0) + 1 FROM tasks"
 	var id int
 	s.SqlDB.QueryRow(query).Scan(&id)
 	return id
@@ -428,6 +424,19 @@ func (s *DbUtils) GetAllTasks() ([]*Tunnel, error) {
 		tasks = append(tasks, &t)
 	}
 	return tasks, nil
+}
+
+func (s *DbUtils) GetByUsername(username string) (*Account, error) {
+	query := "SELECT id, verify_key, web_user_name, IFNULL(web_password, ''), rate_limit, remark, no_display FROM accounts WHERE status = 1 and web_user_name = ?"
+	var account Account
+	var verifyKey string
+	var noDisplay bool
+	err := s.SqlDB.QueryRow(query, username).Scan(&account.Id, &verifyKey, &account.WebUserName, &account.WebPassword, &account.RateLimit, &account.Remark, &noDisplay)
+
+	if err != nil {
+		return nil, errors.New("账号不存在")
+	}
+	return &account, nil
 }
 
 func (s *DbUtils) GetAllClients() ([]*Client, error) {
@@ -454,8 +463,27 @@ func (s *DbUtils) GetAllClients() ([]*Client, error) {
 	return clients, nil
 }
 
+// NewAccount 创建新的账户记录，并进行必要的检测与初始化
+func (s *DbUtils) NewAccount(c *Account) error {
+	// 检查 web 登录用户名是否重复
+	if c.WebUserName != "" && !s.VerifyUserName(c.WebUserName, c.Id) {
+		return errors.New("web login username duplicate, please reset")
+	}
+	if c.RateLimit == 0 {
+		c.Rate = rate.NewRate(int64(2 << 23))
+	} else if c.Rate == nil {
+		c.Rate = rate.NewRate(int64(c.RateLimit * 1024))
+	}
+	c.Rate.Start()
+
+	insertQuery := "INSERT INTO accounts (web_user_name, web_password, rate_limit, remark) VALUES (?, ?, ?, ?)"
+	fmt.Println("SQL Exec:", insertQuery, "with parameters:", c.WebUserName, c.WebPassword, c.RateLimit, c.Remark)
+	_, err := s.SqlDB.Exec(insertQuery, c.WebUserName, c.WebPassword, c.RateLimit, c.Remark)
+	return err
+}
+
 func (s *DbUtils) GetAllHosts() ([]*Host, error) {
-	query := "SELECT id, host, location, scheme, remark, client_id, no_store FROM hosts WHERE status = 1"
+	query := "SELECT id, host, location, scheme, remark, client_id, no_store FROM tasks WHERE status = 1"
 	rows, err := s.SqlDB.Query(query)
 	if err != nil {
 		return nil, err
@@ -493,7 +521,7 @@ func (s *DbUtils) GetTasksByClientId(clientId int) ([]*Tunnel, error) {
 }
 
 func (s *DbUtils) GetHostsByClientId(clientId int) ([]*Host, error) {
-	query := "SELECT id, host, location, scheme, remark FROM hosts WHERE status = 1 AND client_id = ?"
+	query := "SELECT id, host, location, scheme, remark FROM tasks WHERE status = 1 AND client_id = ?"
 	rows, err := s.SqlDB.Query(query, clientId)
 	if err != nil {
 		return nil, err
@@ -524,7 +552,7 @@ func (s *DbUtils) GetClientIdByVkey(vkey string) (int, error) {
 
 // GetHostById 根据 ID 获取 host 记录
 func (s *DbUtils) GetHostById(id int) (*Host, error) {
-	query := "SELECT id, host, location, scheme, remark FROM hosts WHERE id = ? LIMIT 1"
+	query := "SELECT id, host, location, scheme, remark FROM tasks WHERE id = ? LIMIT 1"
 	fmt.Println("SQL Query:", query, "with parameter:", id)
 	var h Host
 	if err := s.SqlDB.QueryRow(query, id).Scan(&h.Id, &h.Host, &h.Location, &h.Scheme, &h.Remark); err != nil {
@@ -534,7 +562,7 @@ func (s *DbUtils) GetHostById(id int) (*Host, error) {
 }
 
 func (s *DbUtils) UpdateHost(h *Host) error {
-	query := "UPDATE hosts SET host = ?, location = ?, scheme = ?, remark = ?, target_str = ?, health_remove_arr = ? WHERE id = ?"
+	query := "UPDATE tasks SET host = ?, location = ?, scheme = ?, remark = ?, target_str = ?, health_remove_arr = ? WHERE id = ?"
 	fmt.Println("SQL Exec:", query, "with parameters:", h.Host, h.Location, h.Scheme, h.Remark, h.Target.TargetStr, strings.Join(h.HealthRemoveArr, ","), h.Id)
 
 	tx, err := s.SqlDB.Begin()
@@ -554,7 +582,7 @@ func (s *DbUtils) UpdateHost(h *Host) error {
 // GetInfoByHost 根据请求中的 host 与 URL 信息返回匹配的 host 记录
 func (s *DbUtils) GetInfoByHost(host string, r *http.Request) (*Host, error) {
 	ip := common.GetIpByAddr(host)
-	query := "SELECT id, host, location, scheme, remark FROM hosts WHERE host = ? AND scheme IN (?, 'all') AND is_close = 0"
+	query := "SELECT id, host, location, scheme, remark FROM tasks WHERE host = ? AND scheme IN (?, 'all') AND is_close = 0"
 	fmt.Println("SQL Query:", query, "with parameters:", ip, r.URL.Scheme)
 	rows, err := s.SqlDB.Query(query, ip, r.URL.Scheme)
 	if err != nil {

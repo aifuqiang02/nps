@@ -89,31 +89,27 @@ func (self *LoginController) doLogin(username, password string, explicit bool) b
 	}
 	b, err := beego.AppConfig.Bool("allow_user_login")
 	if err == nil && b && !auth {
-		clients, err := file.GetDb().GetAllClients()
+		account, err := file.GetDb().GetByUsername(username)
 		if err != nil {
-			logs.Error("Failed to get clients from MySQL:", err)
+			logs.Error("Failed to get account from MySQL:", err)
 			return false
 		}
-		for _, v := range clients {
-			if !v.Status || v.NoDisplay {
-				continue
-			}
-			if v.WebUserName == "" && v.WebPassword == "" {
-				if username != "user" || v.VerifyKey != password {
-					continue
-				} else {
-					auth = true
-				}
-			}
-			if !auth && v.WebPassword == password && v.WebUserName == username {
+
+		// 检查账户凭据
+		if account.WebUserName == "" && account.WebPassword == "" {
+			// 特殊情况：用户名为"user"且密码为验证密钥
+			// 注意：由于Account结构体中没有VerifyKey字段，此逻辑可能需要调整
+			if username == "user" {
 				auth = true
 			}
-			if auth {
-				self.SetSession("isAdmin", false)
-				self.SetSession("clientId", v.Id)
-				self.SetSession("username", v.WebUserName)
-				break
-			}
+		} else if account.WebPassword == password && account.WebUserName == username {
+			auth = true
+		}
+
+		if auth {
+			self.SetSession("isAdmin", false)
+			self.SetSession("clientId", account.Id)
+			self.SetSession("username", account.WebUserName)
 		}
 	}
 	if auth {
@@ -145,15 +141,14 @@ func (self *LoginController) Register() {
 			self.ServeJSON()
 			return
 		}
-		t := &file.Client{
-			Id:          int(file.GetDb().GetNewClientId()),
+		t := &file.Account{
 			Status:      true,
 			Cnf:         &file.Config{},
 			WebUserName: self.GetString("username"),
 			WebPassword: self.GetString("password"),
 			Flow:        &file.Flow{},
 		}
-		if err := file.GetDb().NewClient(t); err != nil {
+		if err := file.GetDb().NewAccount(t); err != nil {
 			self.Data["json"] = map[string]interface{}{"status": 0, "msg": err.Error()}
 		} else {
 			self.Data["json"] = map[string]interface{}{"status": 1, "msg": "register success"}

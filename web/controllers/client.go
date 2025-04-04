@@ -112,12 +112,6 @@ func (s *ClientController) Edit() {
 			s.AjaxErr("client ID not found")
 			return
 		} else {
-			if s.getEscapeString("web_username") != "" {
-				if s.getEscapeString("web_username") == beego.AppConfig.String("web_username") || !file.GetDb().VerifyUserName(s.getEscapeString("web_username"), c.Id) {
-					s.AjaxErr("web login username duplicate, please reset")
-					return
-				}
-			}
 			if s.GetSession("isAdmin").(bool) {
 				if !file.GetDb().VerifyVkey(s.getEscapeString("vkey"), c.Id) {
 					s.AjaxErr("Vkey duplicate, please reset")
