@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Debug nps", // 调试名称
+        "type": "go",        // 调试类型
+        "request": "launch", // 请求类型
+        "mode": "debug",     // 调试模式
+        "program": "${workspaceFolder}/cmd/nps", // 指定入口文件所在目录
+        "cwd": "${workspaceFolder}", // 设置工作目录为项目根目录
+        "args": [],          // 如果需要命令行参数，可以在这里添加
+        "env": {},           // 环境变量（如果需要）
+        "showLog": true      // 显示调试日志
+      }
+    ]
+  }

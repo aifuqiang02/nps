@@ -164,17 +164,17 @@ func (s *DbUtils) NewTask(t *Tunnel) error {
 		return errors.New(fmt.Sprintf("secret mode keys %s must be unique", t.Password))
 	}
 	// 插入任务记录，假设 tasks 表包含 id、password、mode 等字段
-	insertQuery := "INSERT INTO tasks (id, password, mode) VALUES (?, ?, ?)"
-	fmt.Println("SQL Exec:", insertQuery, "with parameters:", t.Id, t.Password, t.Mode)
-	_, err = s.SqlDB.Exec(insertQuery, t.Id, t.Password, t.Mode)
+	insertQuery := "INSERT INTO tasks (id, password, mode,target,remark,port) VALUES (?, ?, ?,?,?,?)"
+	fmt.Println("SQL Exec:", insertQuery, "with parameters:", t.Id, t.Password, t.Mode, t.Target.TargetStr, t.Remark, t.Port)
+	_, err = s.SqlDB.Exec(insertQuery, t.Id, t.Password, t.Mode, t.Target.TargetStr, t.Remark, t.Port)
 	return err
 }
 
 // UpdateTask 更新任务记录
 func (s *DbUtils) UpdateTask(t *Tunnel) error {
-	updateQuery := "UPDATE tasks SET password = ?, mode = ? WHERE id = ?"
-	fmt.Println("SQL Exec:", updateQuery, "with parameters:", t.Password, t.Mode, t.Id)
-	_, err := s.SqlDB.Exec(updateQuery, t.Password, t.Mode, t.Id)
+	updateQuery := "UPDATE tasks SET password = ?, mode = ?, target = ?,remark = ?,port = ? WHERE id = ?"
+	fmt.Println("SQL Exec:", updateQuery, "with parameters:", t.Password, t.Mode, t.Target.TargetStr, t.Remark, t.Port, t.Id)
+	_, err := s.SqlDB.Exec(updateQuery, t.Password, t.Mode, t.Target.TargetStr, t.Remark, t.Port, t.Id)
 	return err
 }
 
@@ -217,10 +217,12 @@ func (s *DbUtils) GetTaskByMd5Password(p string) *Tunnel {
 
 // GetTask 根据任务 ID 获取任务记录
 func (s *DbUtils) GetTask(id int) (*Tunnel, error) {
-	query := "SELECT id, password, mode FROM tasks WHERE id = ? LIMIT 1"
+	query := "SELECT id,password,mode,remark,target,account_id,port FROM tasks WHERE id = ? LIMIT 1"
 	fmt.Println("SQL Query:", query, "with parameter:", id)
 	var t Tunnel
-	if err := s.SqlDB.QueryRow(query, id).Scan(&t.Id, &t.Password, &t.Mode); err != nil {
+	t.Client = &Client{}
+	t.Target = &Target{}
+	if err := s.SqlDB.QueryRow(query, id).Scan(&t.Id, &t.Password, &t.Mode, &t.Remark, &t.Target.TargetStr, &t.AccountId, &t.Port); err != nil {
 		return nil, errors.New("not found")
 	}
 	return &t, nil
@@ -408,7 +410,7 @@ func (s *DbUtils) GetNewHostId() int {
 }
 
 func (s *DbUtils) GetAllTasks() ([]*Tunnel, error) {
-	query := "SELECT id, client_id, port, mode, status, password, remark FROM tasks WHERE status = 1"
+	query := "SELECT id, client_id, port, mode, status, password, remark,port FROM tasks WHERE status = 1"
 	rows, err := s.SqlDB.Query(query)
 	if err != nil {
 		return nil, err
@@ -418,7 +420,7 @@ func (s *DbUtils) GetAllTasks() ([]*Tunnel, error) {
 	var tasks []*Tunnel
 	for rows.Next() {
 		var t Tunnel
-		if err := rows.Scan(&t.Id, &t.ClientId, &t.Port, &t.Mode, &t.Status, &t.Password, &t.Remark); err != nil {
+		if err := rows.Scan(&t.Id, &t.ClientId, &t.Port, &t.Mode, &t.Status, &t.Password, &t.Remark, &t.Port); err != nil {
 			return nil, err
 		}
 		tasks = append(tasks, &t)
@@ -427,7 +429,7 @@ func (s *DbUtils) GetAllTasks() ([]*Tunnel, error) {
 }
 
 func (s *DbUtils) GetUserTasks(accountId int) ([]*Tunnel, error) {
-	query := "SELECT id, client_id, port, mode, status, password, remark FROM tasks WHERE status = 1 and account_id = ?"
+	query := "SELECT id, client_id, port, mode, status, password, remark,target FROM tasks WHERE status = 1 and account_id = ?"
 	fmt.Println("SQL Query:", query, "with parameter:", accountId)
 	rows, err := s.SqlDB.Query(query, accountId)
 	if err != nil {
@@ -439,7 +441,8 @@ func (s *DbUtils) GetUserTasks(accountId int) ([]*Tunnel, error) {
 	var tasks []*Tunnel
 	for rows.Next() {
 		var t Tunnel
-		if err := rows.Scan(&t.Id, &t.ClientId, &t.Port, &t.Mode, &t.Status, &t.Password, &t.Remark); err != nil {
+		t.Target = &Target{}
+		if err := rows.Scan(&t.Id, &t.ClientId, &t.Port, &t.Mode, &t.Status, &t.Password, &t.Remark, &t.Target.TargetStr); err != nil {
 			return nil, err
 		}
 		tasks = append(tasks, &t)
@@ -515,6 +518,7 @@ func (s *DbUtils) GetAllHosts() ([]*Host, error) {
 	var hosts []*Host
 	for rows.Next() {
 		var h Host
+		h.Client = &Client{}
 		if err := rows.Scan(&h.Id, &h.Host, &h.Location, &h.Scheme, &h.Remark, &h.Client.Id, &h.NoStore); err != nil {
 			return nil, err
 		}

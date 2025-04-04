@@ -69,6 +69,10 @@
         onExpandRow: function () {$('body').setLang ('.detail-view');},
         onLoadSuccess:function (data) {$('body').setLang ('.detail-view');},
         onPostBody: function (data) { if ($(this)[0].locale != undefined ) $('body').setLang ('#table'); },
+        responseHandler: function (res) {
+            // 提取接口返回的 rows 数据
+            return res.data.rows;
+        },
         detailFormatter: function (index, row, element) {
             tmp = '<b langtag="word-exportflow"></b>: ' + changeunit(row.Flow.ExportFlow) + '&emsp;'
                     + '<b langtag="word-inletflow"></b>: ' + changeunit(row.Flow.InletFlow) + '&emsp;'

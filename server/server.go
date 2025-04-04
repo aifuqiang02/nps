@@ -260,6 +260,17 @@ func GetTunnel(start, length int, typeVal string, clientId int, search string, s
 
 	// filter tasks
 	for _, v := range tasks {
+		// 确保Client、Target和Flow对象已初始化
+		if v.Client == nil {
+			v.Client = &file.Client{Id: v.ClientId}
+		}
+		if v.Target == nil {
+			v.Target = &file.Target{TargetStr: ""}
+		}
+		if v.Flow == nil {
+			v.Flow = &file.Flow{}
+		}
+
 		if (typeVal != "" && v.Mode != typeVal || (clientId != 0 && v.Client.Id != clientId)) || (typeVal == "" && clientId != v.Client.Id) {
 			continue
 		}
@@ -336,72 +347,38 @@ func GetTunnelV2(start, length int, typeVal string, accountId int, clientId int,
 		logs.Error("Failed to get tasks:", err)
 		return nil, 0
 	}
-
+	logs.Error(" GetTunnelV2 tasks:", tasks)
 	// filter tasks
 	for _, v := range tasks {
-		if (typeVal != "" && v.Mode != typeVal || (clientId != 0 && v.Client.Id != clientId)) || (typeVal == "" && clientId != v.Client.Id) {
-			continue
+		// 确保Client、Target和Flow对象已初始化
+		if v.Client == nil {
+			v.Client = &file.Client{Id: v.ClientId}
+		}
+		if v.Target == nil {
+			v.Target = &file.Target{TargetStr: ""}
+		}
+		if v.Flow == nil {
+			v.Flow = &file.Flow{}
 		}
 		all_list = append(all_list, v)
 	}
-	// sort by Id, Remark, TargetStr, Port, asc or desc
-	if sortField == "Id" {
-		if order == "asc" {
-			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Id < all_list[j].Id })
-		} else {
-			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Id > all_list[j].Id })
-		}
-	} else if sortField == "ClientId" {
-		if order == "asc" {
-			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Client.Id < all_list[j].Client.Id })
-		} else {
-			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Client.Id > all_list[j].Client.Id })
-		}
-	} else if sortField == "Remark" {
-		if order == "asc" {
-			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Remark < all_list[j].Remark })
-		} else {
-			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Remark > all_list[j].Remark })
-		}
-	} else if sortField == "Client.VerifyKey" {
-		if order == "asc" {
-			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Client.VerifyKey < all_list[j].Client.VerifyKey })
-		} else {
-			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Client.VerifyKey > all_list[j].Client.VerifyKey })
-		}
-	} else if sortField == "Target" {
-		if order == "asc" {
-			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Target.TargetStr < all_list[j].Target.TargetStr })
-		} else {
-			sort.SliceStable(all_list, func(i, j int) bool { return all_list[i].Target.TargetStr > all_list[j].Target.TargetStr })
-		}
-	}
-
+	logs.Error(" GetTunnelV2 all_list:", all_list)
 	// search
 	for _, v := range all_list {
-		if (typeVal != "" && v.Mode != typeVal || (clientId != 0 && v.Client.Id != clientId)) || (typeVal == "" && clientId != v.Client.Id) {
-			continue
-		}
-		if search != "" && !(v.Id == common.GetIntNoErrByStr(search) || v.Port == common.GetIntNoErrByStr(search) || strings.Contains(v.Password, search) || strings.Contains(v.Remark, search) || strings.Contains(v.Target.TargetStr, search)) {
-			continue
-		}
 		cnt++
 		if _, ok := Bridge.Client.Load(v.Client.Id); ok {
 			v.Client.IsConnect = true
 		} else {
 			v.Client.IsConnect = false
 		}
-		if start--; start < 0 {
-			if length--; length >= 0 {
-				if _, ok := RunList.Load(v.Id); ok {
-					v.RunStatus = true
-				} else {
-					v.RunStatus = false
-				}
-				list = append(list, v)
-			}
+		if _, ok := RunList.Load(v.Id); ok {
+			v.RunStatus = true
+		} else {
+			v.RunStatus = false
 		}
+		list = append(list, v)
 	}
+	logs.Error(" GetTunnelV2 list:", list)
 	return list, cnt
 }
 
@@ -443,6 +420,10 @@ func DelTunnelAndHostByClientId(clientId int, justDelNoStore bool) {
 		if justDelNoStore && !v.NoStore {
 			continue
 		}
+		// 确保Client对象已初始化，但Host类型没有ClientId字段
+		if v.Client == nil {
+			v.Client = &file.Client{}
+		}
 		if v.Client.Id == clientId {
 			ids = append(ids, v.Id)
 		}
@@ -459,6 +440,10 @@ func DelTunnelAndHostByClientId(clientId int, justDelNoStore bool) {
 	for _, v := range hosts {
 		if justDelNoStore && !v.NoStore {
 			continue
+		}
+		// 确保Client对象已初始化
+		if v.Client == nil {
+			v.Client = &file.Client{}
 		}
 		if v.Client.Id == clientId {
 			ids = append(ids, v.Id)

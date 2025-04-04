@@ -48,7 +48,7 @@ func TestServerPort(p int, m string) (b bool) {
 	} else {
 		b = common.TestTcpPort(p)
 	}
-	return
+	return b
 }
 
 func GenerateServerPort(m string) int {

@@ -176,7 +176,7 @@ func (s *IndexController) Edit() {
 			} else {
 				t.Client = client
 			}
-			if s.GetIntNoErr("port") != t.Port {
+			if s.GetIntNoErr("port") != t.Port || t.Port == 0 {
 				t.Port = s.GetIntNoErr("port")
 
 				if t.Port <= 0 {
