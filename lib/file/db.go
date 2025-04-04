@@ -428,8 +428,10 @@ func (s *DbUtils) GetAllTasks() ([]*Tunnel, error) {
 
 func (s *DbUtils) GetUserTasks(accountId int) ([]*Tunnel, error) {
 	query := "SELECT id, client_id, port, mode, status, password, remark FROM tasks WHERE status = 1 and account_id = ?"
+	fmt.Println("SQL Query:", query, "with parameter:", accountId)
 	rows, err := s.SqlDB.Query(query, accountId)
 	if err != nil {
+		fmt.Println("GetUserTasks err:", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -446,13 +448,13 @@ func (s *DbUtils) GetUserTasks(accountId int) ([]*Tunnel, error) {
 }
 
 func (s *DbUtils) GetByUsername(username string) (*Account, error) {
-	query := "SELECT id, verify_key, web_user_name, IFNULL(web_password, ''), rate_limit, remark, no_display FROM accounts WHERE status = 1 and web_user_name = ?"
+	query := "SELECT id, web_user_name, IFNULL(web_password, '') as web_password, rate_limit, remark FROM accounts WHERE status = 1 and web_user_name = ?"
+	fmt.Println("SQL Query:", query, "with parameter:", username)
 	var account Account
-	var verifyKey string
-	var noDisplay bool
-	err := s.SqlDB.QueryRow(query, username).Scan(&account.Id, &verifyKey, &account.WebUserName, &account.WebPassword, &account.RateLimit, &account.Remark, &noDisplay)
+	err := s.SqlDB.QueryRow(query, username).Scan(&account.Id, &account.WebUserName, &account.WebPassword, &account.RateLimit, &account.Remark)
 
 	if err != nil {
+		fmt.Println("GetByUsername err:", err)
 		return nil, errors.New("账号不存在")
 	}
 	return &account, nil
@@ -462,6 +464,7 @@ func (s *DbUtils) GetAllClients() ([]*Client, error) {
 	query := "SELECT id, verify_key, web_user_name, IFNULL(web_password, ''), rate_limit, remark, no_display FROM clients WHERE status = 1"
 	rows, err := s.SqlDB.Query(query)
 	if err != nil {
+		fmt.Println("GetAllClients err:", err)
 		return nil, err
 	}
 	defer rows.Close()

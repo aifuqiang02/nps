@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"math/rand"
 	"net"
 	"sync"
@@ -58,7 +59,9 @@ func (self *LoginController) Verify() {
 			self.ServeJSON()
 		}
 	}
+	fmt.Println("Verify1:")
 	if self.doLogin(username, password, true) {
+		fmt.Println("Verify2:")
 		token := generateToken(username)
 		self.Data["json"] = map[string]interface{}{"code": 200, "msg": "login success", "data": token}
 	} else {
@@ -70,6 +73,7 @@ func (self *LoginController) Verify() {
 func (self *LoginController) doLogin(username, password string, explicit bool) bool {
 	clearIprecord()
 	ip, _, _ := net.SplitHostPort(self.Ctx.Request.RemoteAddr)
+	fmt.Println("doLogin1:")
 	if v, ok := ipRecord.Load(ip); ok {
 		vv := v.(*record)
 		if (time.Now().Unix() - vv.lastLoginTime.Unix()) >= 60 {
@@ -79,6 +83,7 @@ func (self *LoginController) doLogin(username, password string, explicit bool) b
 			return false
 		}
 	}
+	fmt.Println("doLogin2:")
 	var auth bool
 	if password == beego.AppConfig.String("web_password") && username == beego.AppConfig.String("web_username") {
 		self.SetSession("isAdmin", true)
@@ -87,9 +92,13 @@ func (self *LoginController) doLogin(username, password string, explicit bool) b
 		auth = true
 		server.Bridge.Register.Store(common.GetIpByAddr(self.Ctx.Input.IP()), time.Now().Add(time.Hour*time.Duration(2)))
 	}
+	fmt.Println("doLogin3:")
 	b, err := beego.AppConfig.Bool("allow_user_login")
+	fmt.Println("doLogin31:", err, b, auth)
 	if err == nil && b && !auth {
+		fmt.Println("doLogin4:")
 		account, err := file.GetDb().GetByUsername(username)
+		fmt.Println("doLogin5:")
 		if err != nil {
 			logs.Error("Failed to get account from MySQL:", err)
 			return false
@@ -112,11 +121,15 @@ func (self *LoginController) doLogin(username, password string, explicit bool) b
 			self.SetSession("username", account.WebUserName)
 		}
 	}
+	fmt.Println("doLogin6:")
 	if auth {
+		fmt.Println("doLogin61:")
 		self.SetSession("auth", true)
 		ipRecord.Delete(ip)
+		fmt.Println("doLogin62:")
 		return true
 	}
+	fmt.Println("doLogin7:")
 	if v, load := ipRecord.LoadOrStore(ip, &record{hasLoginFailTimes: 1, lastLoginTime: time.Now()}); load && explicit {
 		vv := v.(*record)
 		vv.lastLoginTime = time.Now()
@@ -170,7 +183,9 @@ func generateToken(username string) string {
 		secret = crypt.GetRandomString(64)
 	}
 	account, err := file.GetDb().GetByUsername(username)
+	fmt.Println("generateToken1:", account)
 	// Create token with 24h expiration
+	fmt.Println("accountId:", account.Id)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"username":  username,
 		"accountId": account.Id,
