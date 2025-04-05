@@ -163,18 +163,62 @@ func (s *DbUtils) NewTask(t *Tunnel) error {
 	if count > 0 {
 		return errors.New(fmt.Sprintf("secret mode keys %s must be unique", t.Password))
 	}
-	// 插入任务记录，假设 tasks 表包含 id、password、mode 等字段
-	insertQuery := "INSERT INTO tasks (id, password, mode,target,remark,port) VALUES (?, ?, ?,?,?,?)"
-	fmt.Println("SQL Exec:", insertQuery, "with parameters:", t.Id, t.Password, t.Mode, t.Target.TargetStr, t.Remark, t.Port)
-	_, err = s.SqlDB.Exec(insertQuery, t.Id, t.Password, t.Mode, t.Target.TargetStr, t.Remark, t.Port)
+
+	// 插入任务记录，使用完整的字段列表
+	insertQuery := `INSERT INTO tasks (
+		id, account_id, port, server_ip, mode, status, run_status, client_id, 
+		ports, password, remark, target_addr, no_store, is_http, local_path, 
+		strip_pre, header_change, host_change, location, host, scheme, 
+		cert_file_path, key_file_path, is_close, auto_https, target
+	) VALUES (
+		?, ?, ?, ?, ?, ?, ?, ?, 
+		?, ?, ?, ?, ?, ?, ?, 
+		?, ?, ?, ?, ?, ?, 
+		?, ?, ?, ?, ?
+	)`
+
+	// 准备参数
+	targetStr := ""
+	if t.Target != nil {
+		targetStr = t.Target.TargetStr
+	}
+
+	fmt.Println("SQL Exec:", insertQuery, "with parameters:", t.Id, t.AccountId, t.Port, t.ServerIp, t.Mode, t.Status, t.RunStatus, t.ClientId)
+	_, err = s.SqlDB.Exec(
+		insertQuery,
+		t.Id, t.AccountId, t.Port, t.ServerIp, t.Mode, t.Status, t.RunStatus, t.ClientId,
+		t.Ports, t.Password, t.Remark, t.TargetAddr, t.NoStore, t.IsHttp, t.LocalPath,
+		t.StripPre, t.HeaderChange, t.HostChange, t.Location, t.Host, t.Scheme,
+		t.CertFilePath, t.KeyFilePath, t.IsClose, t.AutoHttps, targetStr,
+	)
 	return err
 }
 
 // UpdateTask 更新任务记录
 func (s *DbUtils) UpdateTask(t *Tunnel) error {
-	updateQuery := "UPDATE tasks SET password = ?, mode = ?, target = ?,remark = ?,port = ? WHERE id = ?"
-	fmt.Println("SQL Exec:", updateQuery, "with parameters:", t.Password, t.Mode, t.Target.TargetStr, t.Remark, t.Port, t.Id)
-	_, err := s.SqlDB.Exec(updateQuery, t.Password, t.Mode, t.Target.TargetStr, t.Remark, t.Port, t.Id)
+	// 使用完整的字段列表更新任务记录
+	updateQuery := `UPDATE tasks SET 
+		account_id = ?, port = ?, server_ip = ?, mode = ?, status = ?, run_status = ?, client_id = ?,
+		ports = ?, password = ?, remark = ?, target_addr = ?, no_store = ?, is_http = ?, local_path = ?,
+		strip_pre = ?, header_change = ?, host_change = ?, location = ?, host = ?, scheme = ?,
+		cert_file_path = ?, key_file_path = ?, is_close = ?, auto_https = ?, target = ?
+		WHERE id = ?`
+
+	// 准备参数
+	targetStr := ""
+	if t.Target != nil {
+		targetStr = t.Target.TargetStr
+	}
+
+	fmt.Println("SQL Exec:", updateQuery, "with parameters:", t.AccountId, t.Port, t.ServerIp, t.Mode, t.Status, t.RunStatus, t.ClientId)
+	_, err := s.SqlDB.Exec(
+		updateQuery,
+		t.AccountId, t.Port, t.ServerIp, t.Mode, t.Status, t.RunStatus, t.ClientId,
+		t.Ports, t.Password, t.Remark, t.TargetAddr, t.NoStore, t.IsHttp, t.LocalPath,
+		t.StripPre, t.HeaderChange, t.HostChange, t.Location, t.Host, t.Scheme,
+		t.CertFilePath, t.KeyFilePath, t.IsClose, t.AutoHttps, targetStr,
+		t.Id,
+	)
 	return err
 }
 
@@ -196,6 +240,7 @@ func (s *DbUtils) DelTask(id int) error {
 
 // GetTaskByMd5Password 根据密码的 MD5 值获取任务记录
 func (s *DbUtils) GetTaskByMd5Password(p string) *Tunnel {
+	// 首先查询所有任务的ID、密码和模式
 	query := "SELECT id, password, mode FROM tasks"
 	fmt.Println("SQL Query:", query)
 	rows, err := s.SqlDB.Query(query)
@@ -203,13 +248,21 @@ func (s *DbUtils) GetTaskByMd5Password(p string) *Tunnel {
 		return nil
 	}
 	defer rows.Close()
+
+	// 遍历所有任务，查找匹配的密码
 	for rows.Next() {
 		var t Tunnel
 		if err := rows.Scan(&t.Id, &t.Password, &t.Mode); err != nil {
 			continue
 		}
+
+		// 如果找到匹配的密码，获取完整的任务记录
 		if crypt.Md5(t.Password) == p {
-			return &t
+			fullTask, err := s.GetTask(t.Id)
+			if err != nil {
+				return nil
+			}
+			return fullTask
 		}
 	}
 	return nil
@@ -217,14 +270,33 @@ func (s *DbUtils) GetTaskByMd5Password(p string) *Tunnel {
 
 // GetTask 根据任务 ID 获取任务记录
 func (s *DbUtils) GetTask(id int) (*Tunnel, error) {
-	query := "SELECT id,password,mode,remark,target,account_id,port FROM tasks WHERE id = ? LIMIT 1"
+	// 查询指定ID的任务记录，使用完整的字段列表
+	query := `SELECT 
+		id, account_id, port, server_ip, mode, status, run_status, client_id, 
+		ports, password, remark, target_addr, no_store, is_http, local_path, 
+		strip_pre, header_change, host_change, location, host, scheme, 
+		cert_file_path, key_file_path, is_close, auto_https, IFNULL(target, '')
+		FROM tasks WHERE id = ? LIMIT 1`
+
 	fmt.Println("SQL Query:", query, "with parameter:", id)
+
 	var t Tunnel
-	t.Client = &Client{}
 	t.Target = &Target{}
-	if err := s.SqlDB.QueryRow(query, id).Scan(&t.Id, &t.Password, &t.Mode, &t.Remark, &t.Target.TargetStr, &t.AccountId, &t.Port); err != nil {
+	t.Flow = &Flow{}
+
+	// 扫描所有字段
+	if err := s.SqlDB.QueryRow(query, id).Scan(
+		&t.Id, &t.AccountId, &t.Port, &t.ServerIp, &t.Mode, &t.Status, &t.RunStatus, &t.ClientId,
+		&t.Ports, &t.Password, &t.Remark, &t.TargetAddr, &t.NoStore, &t.IsHttp, &t.LocalPath,
+		&t.StripPre, &t.HeaderChange, &t.HostChange, &t.Location, &t.Host, &t.Scheme,
+		&t.CertFilePath, &t.KeyFilePath, &t.IsClose, &t.AutoHttps, &t.Target.TargetStr,
+	); err != nil {
 		return nil, errors.New("not found")
 	}
+
+	// 初始化Client对象
+	t.Client = &Client{Id: t.ClientId}
+
 	return &t, nil
 }
 
@@ -256,9 +328,37 @@ func (s *DbUtils) NewHost(t *Host) error {
 	if s.IsHostExist(t) {
 		return errors.New("host has exist")
 	}
-	insertQuery := "INSERT INTO tasks (id, host, location, scheme) VALUES (?, ?, ?, ?)"
-	fmt.Println("SQL Exec:", insertQuery, "with parameters:", t.Id, t.Host, t.Location, t.Scheme)
-	_, err := s.SqlDB.Exec(insertQuery, t.Id, t.Host, t.Location, t.Scheme)
+
+	// 插入host记录，使用完整的字段列表
+	insertQuery := `INSERT INTO tasks (
+		id, account_id, client_id, host, location, scheme, remark, 
+		no_store, is_close, auto_https, target, status
+	) VALUES (
+		?, ?, ?, ?, ?, ?, ?, 
+		?, ?, ?, ?, ?
+	)`
+
+	// 准备参数
+	targetStr := ""
+	if t.Target != nil {
+		targetStr = t.Target.TargetStr
+	}
+
+	clientId := 0
+	if t.Client != nil {
+		clientId = t.Client.Id
+	}
+
+	// 默认值
+	accountId := 0 // 可以从session中获取
+	status := true // 默认启用
+
+	fmt.Println("SQL Exec:", insertQuery, "with parameters:", t.Id, accountId, clientId, t.Host, t.Location, t.Scheme, t.Remark)
+	_, err := s.SqlDB.Exec(
+		insertQuery,
+		t.Id, accountId, clientId, t.Host, t.Location, t.Scheme, t.Remark,
+		t.NoStore, t.IsClose, t.AutoHttps, targetStr, status,
+	)
 	return err
 }
 
@@ -410,7 +510,14 @@ func (s *DbUtils) GetNewHostId() int {
 }
 
 func (s *DbUtils) GetAllTasks() ([]*Tunnel, error) {
-	query := "SELECT id, client_id, port, mode, status, password, remark,port FROM tasks WHERE status = 1"
+	// 查询所有任务记录，使用完整的字段列表
+	query := `SELECT 
+		id, account_id, port, server_ip, mode, status, run_status, client_id, 
+		ports, password, remark, target_addr, no_store, is_http, local_path, 
+		strip_pre, header_change, host_change, location, host, scheme, 
+		cert_file_path, key_file_path, is_close, auto_https, IFNULL(target, '')
+		FROM tasks WHERE status = 1`
+
 	rows, err := s.SqlDB.Query(query)
 	if err != nil {
 		return nil, err
@@ -420,16 +527,36 @@ func (s *DbUtils) GetAllTasks() ([]*Tunnel, error) {
 	var tasks []*Tunnel
 	for rows.Next() {
 		var t Tunnel
-		if err := rows.Scan(&t.Id, &t.ClientId, &t.Port, &t.Mode, &t.Status, &t.Password, &t.Remark, &t.Port); err != nil {
+		t.Target = &Target{}
+		t.Flow = &Flow{}
+
+		// 扫描所有字段
+		if err := rows.Scan(
+			&t.Id, &t.AccountId, &t.Port, &t.ServerIp, &t.Mode, &t.Status, &t.RunStatus, &t.ClientId,
+			&t.Ports, &t.Password, &t.Remark, &t.TargetAddr, &t.NoStore, &t.IsHttp, &t.LocalPath,
+			&t.StripPre, &t.HeaderChange, &t.HostChange, &t.Location, &t.Host, &t.Scheme,
+			&t.CertFilePath, &t.KeyFilePath, &t.IsClose, &t.AutoHttps, &t.Target.TargetStr,
+		); err != nil {
 			return nil, err
 		}
+
+		// 初始化Client对象
+		t.Client = &Client{Id: t.ClientId}
+
 		tasks = append(tasks, &t)
 	}
 	return tasks, nil
 }
 
 func (s *DbUtils) GetUserTasks(accountId int) ([]*Tunnel, error) {
-	query := "SELECT id, client_id, port, mode, status, password, remark,target FROM tasks WHERE status = 1 and account_id = ?"
+	// 查询指定账户的任务记录，使用完整的字段列表
+	query := `SELECT 
+		id, account_id, port, server_ip, mode, status, run_status, client_id, 
+		ports, password, remark, target_addr, no_store, is_http, local_path, 
+		strip_pre, header_change, host_change, location, host, scheme, 
+		cert_file_path, key_file_path, is_close, auto_https, IFNULL(target, '')
+		FROM tasks WHERE status = 1 AND account_id = ?`
+
 	fmt.Println("SQL Query:", query, "with parameter:", accountId)
 	rows, err := s.SqlDB.Query(query, accountId)
 	if err != nil {
@@ -442,9 +569,21 @@ func (s *DbUtils) GetUserTasks(accountId int) ([]*Tunnel, error) {
 	for rows.Next() {
 		var t Tunnel
 		t.Target = &Target{}
-		if err := rows.Scan(&t.Id, &t.ClientId, &t.Port, &t.Mode, &t.Status, &t.Password, &t.Remark, &t.Target.TargetStr); err != nil {
+		t.Flow = &Flow{}
+
+		// 扫描所有字段
+		if err := rows.Scan(
+			&t.Id, &t.AccountId, &t.Port, &t.ServerIp, &t.Mode, &t.Status, &t.RunStatus, &t.ClientId,
+			&t.Ports, &t.Password, &t.Remark, &t.TargetAddr, &t.NoStore, &t.IsHttp, &t.LocalPath,
+			&t.StripPre, &t.HeaderChange, &t.HostChange, &t.Location, &t.Host, &t.Scheme,
+			&t.CertFilePath, &t.KeyFilePath, &t.IsClose, &t.AutoHttps, &t.Target.TargetStr,
+		); err != nil {
 			return nil, err
 		}
+
+		// 初始化Client对象
+		t.Client = &Client{Id: t.ClientId}
+
 		tasks = append(tasks, &t)
 	}
 	return tasks, nil
@@ -578,18 +717,56 @@ func (s *DbUtils) GetClientIdByVkey(vkey string) (int, error) {
 
 // GetHostById 根据 ID 获取 host 记录
 func (s *DbUtils) GetHostById(id int) (*Host, error) {
-	query := "SELECT id, host, location, scheme, remark FROM tasks WHERE id = ? LIMIT 1"
+	// 查询指定ID的host记录，使用完整的字段列表
+	query := `SELECT 
+		id, host, location, scheme, remark, client_id, 
+		no_store, is_close, auto_https, IFNULL(target, '')
+		FROM tasks WHERE id = ? LIMIT 1`
+
 	fmt.Println("SQL Query:", query, "with parameter:", id)
+
 	var h Host
-	if err := s.SqlDB.QueryRow(query, id).Scan(&h.Id, &h.Host, &h.Location, &h.Scheme, &h.Remark); err != nil {
+	h.Target = &Target{}
+	h.Flow = &Flow{}
+	var clientId int
+	var targetStr string
+
+	// 扫描所有字段
+	if err := s.SqlDB.QueryRow(query, id).Scan(
+		&h.Id, &h.Host, &h.Location, &h.Scheme, &h.Remark, &clientId,
+		&h.NoStore, &h.IsClose, &h.AutoHttps, &targetStr,
+	); err != nil {
 		return nil, errors.New("The host could not be parsed")
 	}
+
+	// 设置Target字符串
+	h.Target.TargetStr = targetStr
+
+	// 初始化Client对象
+	h.Client = &Client{Id: clientId}
+
 	return &h, nil
 }
 
 func (s *DbUtils) UpdateHost(h *Host) error {
-	query := "UPDATE tasks SET host = ?, location = ?, scheme = ?, remark = ?, target_str = ?, health_remove_arr = ? WHERE id = ?"
-	fmt.Println("SQL Exec:", query, "with parameters:", h.Host, h.Location, h.Scheme, h.Remark, h.Target.TargetStr, strings.Join(h.HealthRemoveArr, ","), h.Id)
+	// 使用完整的字段列表更新host记录
+	query := `UPDATE tasks SET 
+		host = ?, location = ?, scheme = ?, remark = ?, client_id = ?,
+		no_store = ?, is_close = ?, auto_https = ?, target = ?
+		WHERE id = ?`
+
+	// 准备参数
+	targetStr := ""
+	if h.Target != nil {
+		targetStr = h.Target.TargetStr
+	}
+
+	clientId := 0
+	if h.Client != nil {
+		clientId = h.Client.Id
+	}
+
+	fmt.Println("SQL Exec:", query, "with parameters:", h.Host, h.Location, h.Scheme, h.Remark, clientId)
 
 	tx, err := s.SqlDB.Begin()
 	if err != nil {
@@ -597,7 +774,12 @@ func (s *DbUtils) UpdateHost(h *Host) error {
 	}
 	defer tx.Rollback()
 
-	_, err = tx.Exec(query, h.Host, h.Location, h.Scheme, h.Remark, h.Target.TargetStr, strings.Join(h.HealthRemoveArr, ","), h.Id)
+	_, err = tx.Exec(
+		query,
+		h.Host, h.Location, h.Scheme, h.Remark, clientId,
+		h.NoStore, h.IsClose, h.AutoHttps, targetStr,
+		h.Id,
+	)
 	if err != nil {
 		return err
 	}
@@ -608,28 +790,54 @@ func (s *DbUtils) UpdateHost(h *Host) error {
 // GetInfoByHost 根据请求中的 host 与 URL 信息返回匹配的 host 记录
 func (s *DbUtils) GetInfoByHost(host string, r *http.Request) (*Host, error) {
 	ip := common.GetIpByAddr(host)
-	query := "SELECT id, host, location, scheme, remark FROM tasks WHERE host = ? AND scheme IN (?, 'all') AND is_close = 0"
+
+	// 查询匹配的host记录，使用更多字段
+	query := `SELECT 
+		id, host, location, scheme, remark, client_id, 
+		no_store, is_close, auto_https, IFNULL(target, '')
+		FROM tasks WHERE host = ? AND scheme IN (?, 'all') AND is_close = 0`
+
 	fmt.Println("SQL Query:", query, "with parameters:", ip, r.URL.Scheme)
 	rows, err := s.SqlDB.Query(query, ip, r.URL.Scheme)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+
 	var selected *Host
 	for rows.Next() {
 		var h Host
-		if err := rows.Scan(&h.Id, &h.Host, &h.Location, &h.Scheme, &h.Remark); err != nil {
+		h.Target = &Target{}
+		h.Flow = &Flow{}
+		var clientId int
+		var targetStr string
+
+		// 扫描所有字段
+		if err := rows.Scan(
+			&h.Id, &h.Host, &h.Location, &h.Scheme, &h.Remark, &clientId,
+			&h.NoStore, &h.IsClose, &h.AutoHttps, &targetStr,
+		); err != nil {
 			continue
 		}
+
+		// 设置Target字符串
+		h.Target.TargetStr = targetStr
+
+		// 初始化Client对象
+		h.Client = &Client{Id: clientId}
+
 		if h.Location == "" {
 			h.Location = "/"
 		}
+
+		// 选择最匹配的记录
 		if strings.HasPrefix(r.RequestURI, h.Location) {
 			if selected == nil || len(h.Location) > len(selected.Location) {
 				selected = &h
 			}
 		}
 	}
+
 	if selected != nil {
 		return selected, nil
 	}
