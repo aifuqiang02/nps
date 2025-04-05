@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"strings"
-	"time"
 
 	"ehang.io/nps/lib/common"
 	"ehang.io/nps/lib/file"
@@ -46,36 +45,41 @@ func (s *ClientController) Add() {
 		s.SetInfo("add client")
 		s.display()
 	} else {
-		id := int(file.GetDb().GetNewClientId())
-		t := &file.Client{
-			VerifyKey: s.getEscapeString("vkey"),
-			Id:        id,
-			Status:    true,
-			Remark:    s.getEscapeString("remark"),
-			Cnf: &file.Config{
-				U:        s.getEscapeString("u"),
-				P:        s.getEscapeString("p"),
-				Compress: common.GetBoolByStr(s.getEscapeString("compress")),
-				Crypt:    s.GetBoolNoErr("crypt"),
-			},
-			ConfigConnAllow: s.GetBoolNoErr("config_conn_allow"),
-			RateLimit:       s.GetIntNoErr("rate_limit"),
-			MaxConn:         s.GetIntNoErr("max_conn"),
-			WebUserName:     s.getEscapeString("web_username"),
-			WebPassword:     s.getEscapeString("web_password"),
-			MaxTunnelNum:    s.GetIntNoErr("max_tunnel"),
-			Flow: &file.Flow{
-				ExportFlow: 0,
-				InletFlow:  0,
-				FlowLimit:  int64(s.GetIntNoErr("flow_limit")),
-			},
-			BlackIpList: RemoveRepeatedElement(strings.Split(s.getEscapeString("blackiplist"), "\r\n")),
-			CreateTime:  time.Now().Format("2006-01-02 15:04:05"),
+		accountId := s.GetSessionIntNoErr("accountId")
+		vkey := s.getEscapeString("vkey")
+		clientId := file.GetDb().GetClientByVkeyAndAccountId(vkey, accountId)
+		if clientId == 0 {
+			clientId := int(file.GetDb().GetNewClientId())
+			t := &file.Client{
+				VerifyKey: vkey,
+				Id:        clientId,
+				AccountId: accountId,
+				Status:    true,
+				Remark:    s.getEscapeString("remark"),
+				Cnf: &file.Config{
+					U:        s.getEscapeString("u"),
+					P:        s.getEscapeString("p"),
+					Compress: common.GetBoolByStr(s.getEscapeString("compress")),
+					Crypt:    s.GetBoolNoErr("crypt"),
+				},
+				ConfigConnAllow: s.GetBoolNoErr("config_conn_allow"),
+				RateLimit:       s.GetIntNoErr("rate_limit"),
+				MaxConn:         s.GetIntNoErr("max_conn"),
+				MaxTunnelNum:    s.GetIntNoErr("max_tunnel"),
+				Flow: &file.Flow{
+					ExportFlow: 0,
+					InletFlow:  0,
+					FlowLimit:  int64(s.GetIntNoErr("flow_limit")),
+				},
+				BlackIpList: RemoveRepeatedElement(strings.Split(s.getEscapeString("blackiplist"), "\r\n")),
+			}
+			if err := file.GetDb().NewClient(t); err != nil {
+
+				s.AjaxErr(err.Error())
+			}
 		}
-		if err := file.GetDb().NewClient(t); err != nil {
-			s.AjaxErr(err.Error())
-		}
-		s.AjaxOkWithId("add success", id)
+
+		s.AjaxOkWithId("add success", clientId)
 	}
 }
 func (s *ClientController) GetClient() {

@@ -133,7 +133,7 @@ func (s *DbUtils) GetClientList(start, length int, search, sortField, order stri
 // GetIdByVerifyKey 根据 verify key 获取客户端 ID，并更新其地址信息
 func (s *DbUtils) GetIdByVerifyKey(vKey string, addr string) (int, error) {
 	// 这里通过 MySQL 中的 MD5 函数匹配 verify_key
-	query := "SELECT id FROM clients WHERE MD5(verify_key) = ? AND status = 1 LIMIT 1"
+	query := "SELECT id FROM clients WHERE verify_key = ? AND status = 1 LIMIT 1"
 	fmt.Println("SQL Query:", query, "with parameter:", vKey)
 	var id int
 	if err := s.SqlDB.QueryRow(query, vKey).Scan(&id); err != nil {
@@ -198,7 +198,7 @@ func (s *DbUtils) NewTask(t *Tunnel) error {
 func (s *DbUtils) UpdateTask(t *Tunnel) error {
 	// 使用完整的字段列表更新任务记录
 	updateQuery := `UPDATE tasks SET 
-		account_id = ?, port = ?, server_ip = ?, mode = ?, status = ?, run_status = ?, client_id = ?,
+		 port = ?, server_ip = ?, mode = ?, status = ?, 
 		ports = ?, password = ?, remark = ?, target_addr = ?, no_store = ?, is_http = ?, local_path = ?,
 		strip_pre = ?, header_change = ?, host_change = ?, location = ?, host = ?, scheme = ?,
 		cert_file_path = ?, key_file_path = ?, is_close = ?, auto_https = ?, target = ? , external_service_domain = ?
@@ -213,7 +213,7 @@ func (s *DbUtils) UpdateTask(t *Tunnel) error {
 	fmt.Println("SQL Exec:", updateQuery, "with parameters:", t.AccountId, t.Port, t.ServerIp, t.Mode, t.Status, t.RunStatus, t.ClientId)
 	_, err := s.SqlDB.Exec(
 		updateQuery,
-		t.AccountId, t.Port, t.ServerIp, t.Mode, t.Status, t.RunStatus, t.ClientId,
+		t.Port, t.ServerIp, t.Mode, t.Status,
 		t.Ports, t.Password, t.Remark, t.TargetAddr, t.NoStore, t.IsHttp, t.LocalPath,
 		t.StripPre, t.HeaderChange, t.HostChange, t.Location, t.Host, t.Scheme,
 		t.CertFilePath, t.KeyFilePath, t.IsClose, t.AutoHttps, targetStr, t.ExternalServiceDomain,
@@ -275,7 +275,7 @@ func (s *DbUtils) GetTask(id int) (*Tunnel, error) {
 		id, account_id, port, server_ip, mode, status, run_status, client_id, 
 		ports, password, remark, target_addr, no_store, is_http, local_path, 
 		strip_pre, header_change, host_change, location, host, scheme, 
-		cert_file_path, key_file_path, is_close, auto_https, IFNULL(target, ''),external_service_domain
+		cert_file_path, key_file_path, is_close, auto_https, IFNULL(target, '') as target,external_service_domain
 		FROM tasks WHERE id = ? LIMIT 1`
 
 	fmt.Println("SQL Query:", query, "with parameter:", id)
@@ -289,8 +289,10 @@ func (s *DbUtils) GetTask(id int) (*Tunnel, error) {
 		&t.Id, &t.AccountId, &t.Port, &t.ServerIp, &t.Mode, &t.Status, &t.RunStatus, &t.ClientId,
 		&t.Ports, &t.Password, &t.Remark, &t.TargetAddr, &t.NoStore, &t.IsHttp, &t.LocalPath,
 		&t.StripPre, &t.HeaderChange, &t.HostChange, &t.Location, &t.Host, &t.Scheme,
-		&t.CertFilePath, &t.KeyFilePath, &t.IsClose, &t.AutoHttps, &t.Target.TargetStr, t.ExternalServiceDomain,
+		&t.CertFilePath, &t.KeyFilePath, &t.IsClose, &t.AutoHttps, &t.Target.TargetStr, &t.ExternalServiceDomain,
 	); err != nil {
+		fmt.Println("GetTask err:", err)
+
 		return nil, errors.New("not found")
 	}
 
@@ -418,9 +420,12 @@ func (s *DbUtils) NewClient(c *Client) error {
 	if !s.VerifyVkey(c.VerifyKey, c.Id) {
 		return errors.New("Vkey duplicate, please reset")
 	}
-	insertQuery := "INSERT INTO clients (id, verify_key, web_user_name, web_password, rate_limit, remark) VALUES (?, ?, ?, ?, ?, ?)"
-	fmt.Println("SQL Exec:", insertQuery, "with parameters:", c.Id, c.VerifyKey, c.WebUserName, c.WebPassword, c.RateLimit, c.Remark)
-	_, err := s.SqlDB.Exec(insertQuery, c.Id, c.VerifyKey, c.WebUserName, c.WebPassword, c.RateLimit, c.Remark)
+	insertQuery := "INSERT INTO clients (id, verify_key, account_id, rate_limit, remark) VALUES (?, ?, ?, ?, ?)"
+	fmt.Println("SQL Exec:", insertQuery, "with parameters:", c.Id, c.VerifyKey, c.AccountId, c.RateLimit, c.Remark)
+	_, err := s.SqlDB.Exec(insertQuery, c.Id, c.VerifyKey, c.AccountId, c.RateLimit, c.Remark)
+	if err != nil {
+		fmt.Println("NewClient err:", err)
+	}
 	return err
 }
 
@@ -554,7 +559,7 @@ func (s *DbUtils) GetUserTasks(accountId int) ([]*Tunnel, error) {
 		id, account_id, port, server_ip, mode, status, run_status, client_id, 
 		ports, password, remark, target_addr, no_store, is_http, local_path, 
 		strip_pre, header_change, host_change, location, host, scheme, 
-		cert_file_path, key_file_path, is_close, auto_https, IFNULL(target, '')
+		cert_file_path, key_file_path, is_close, auto_https, IFNULL(target, '') as target,external_service_domain
 		FROM tasks WHERE status = 1 AND account_id = ?`
 
 	fmt.Println("SQL Query:", query, "with parameter:", accountId)
@@ -576,7 +581,7 @@ func (s *DbUtils) GetUserTasks(accountId int) ([]*Tunnel, error) {
 			&t.Id, &t.AccountId, &t.Port, &t.ServerIp, &t.Mode, &t.Status, &t.RunStatus, &t.ClientId,
 			&t.Ports, &t.Password, &t.Remark, &t.TargetAddr, &t.NoStore, &t.IsHttp, &t.LocalPath,
 			&t.StripPre, &t.HeaderChange, &t.HostChange, &t.Location, &t.Host, &t.Scheme,
-			&t.CertFilePath, &t.KeyFilePath, &t.IsClose, &t.AutoHttps, &t.Target.TargetStr,
+			&t.CertFilePath, &t.KeyFilePath, &t.IsClose, &t.AutoHttps, &t.Target.TargetStr, &t.ExternalServiceDomain,
 		); err != nil {
 			return nil, err
 		}
@@ -706,13 +711,24 @@ func (s *DbUtils) GetHostsByClientId(clientId int) ([]*Host, error) {
 
 // GetClientIdByVkey 根据 verify_key 的 MD5 值获取客户端 ID
 func (s *DbUtils) GetClientIdByVkey(vkey string) (int, error) {
-	query := "SELECT id FROM clients WHERE MD5(verify_key) = ? LIMIT 1"
+	query := "SELECT id FROM clients WHERE verify_key = ? LIMIT 1"
 	fmt.Println("SQL Query:", query, "with parameter:", vkey)
 	var id int
 	if err := s.SqlDB.QueryRow(query, vkey).Scan(&id); err != nil {
 		return 0, errors.New("未找到客户端")
 	}
 	return id, nil
+}
+
+// GetClientIdByVkey 根据 verify_key 的 MD5 值获取客户端 ID
+func (s *DbUtils) GetClientByVkeyAndAccountId(vkey string, accountId int) int {
+	query := "SELECT id FROM clients WHERE verify_key = ? and account_id = ?  LIMIT 1"
+	fmt.Println("SQL Query:", query, "with parameter:", vkey, accountId)
+	var id int
+	if err := s.SqlDB.QueryRow(query, vkey, accountId).Scan(&id); err != nil {
+		return 0
+	}
+	return id
 }
 
 // GetHostById 根据 ID 获取 host 记录

@@ -107,10 +107,12 @@ func (s *IndexController) Add() {
 		s.display()
 	} else {
 		id := int(file.GetDb().GetNewTaskId())
+
 		t := &file.Tunnel{
 			Port:      s.GetIntNoErr("port"),
 			ServerIp:  s.getEscapeString("server_ip"),
-			Mode:      s.getEscapeString("type"),
+			AccountId: s.GetSessionIntNoErr("accountId"),
+			Mode:      s.getEscapeString("mode"),
 			Target:    &file.Target{TargetStr: s.getEscapeString("target"), LocalProxy: s.GetBoolNoErr("local_proxy")},
 			Id:        id,
 			Status:    true,
@@ -119,6 +121,14 @@ func (s *IndexController) Add() {
 			LocalPath: s.getEscapeString("local_path"),
 			StripPre:  s.getEscapeString("strip_pre"),
 			Flow:      &file.Flow{},
+		}
+
+		if client, err := file.GetDb().GetClient(s.GetIntNoErr("client_id")); err != nil {
+			s.AjaxErr("modified error,the client is not exist")
+			return
+		} else {
+			t.Client = client
+			t.ClientId = client.Id
 		}
 
 		if t.Port <= 0 {
@@ -176,12 +186,6 @@ func (s *IndexController) Edit() {
 		if t, err := file.GetDb().GetTask(id); err != nil {
 			s.error()
 		} else {
-			if client, err := file.GetDb().GetClient(s.GetIntNoErr("client_id")); err != nil {
-				s.AjaxErr("modified error,the client is not exist")
-				return
-			} else {
-				t.Client = client
-			}
 			if s.GetIntNoErr("port") != t.Port || t.Port == 0 {
 				t.Port = s.GetIntNoErr("port")
 
@@ -200,7 +204,7 @@ func (s *IndexController) Edit() {
 				t.ExternalServiceDomain = beego.AppConfig.String("external_service_ip") + ":" + strconv.Itoa(t.Port)
 			}
 			t.ServerIp = s.getEscapeString("server_ip")
-			t.Mode = s.getEscapeString("type")
+			t.Mode = s.getEscapeString("mode")
 			t.Target = &file.Target{TargetStr: s.getEscapeString("target")}
 			t.Password = s.getEscapeString("password")
 			t.Id = id
