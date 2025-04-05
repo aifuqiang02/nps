@@ -169,35 +169,36 @@ func (s *Client) HasHost(h *Host) bool {
 }
 
 type Tunnel struct {
-	Id           int
-	AccountId    int
-	ClientId     int
-	Port         int
-	ServerIp     string
-	Mode         string
-	Status       bool
-	RunStatus    bool
-	Client       *Client
-	Ports        string
-	Flow         *Flow
-	Password     string
-	Remark       string
-	TargetAddr   string
-	NoStore      bool
-	IsHttp       bool
-	LocalPath    string
-	StripPre     string
-	Target       *Target
-	Host         string // host
-	HeaderChange string // header change
-	HostChange   string // host change
-	Location     string // url router
-	Scheme       string // http https all
-	CertFilePath string
-	KeyFilePath  string
-	IsClose      bool
-	AutoHttps    bool // 自动https
-	MultiAccount *MultiAccount
+	Id                    int
+	AccountId             int
+	ClientId              int
+	Port                  int
+	ServerIp              string
+	ExternalServiceDomain string
+	Mode                  string
+	Status                bool
+	RunStatus             bool
+	Client                *Client
+	Ports                 string
+	Flow                  *Flow
+	Password              string
+	Remark                string
+	TargetAddr            string
+	NoStore               bool
+	IsHttp                bool
+	LocalPath             string
+	StripPre              string
+	Target                *Target
+	Host                  string // host
+	HeaderChange          string // header change
+	HostChange            string // host change
+	Location              string // url router
+	Scheme                string // http https all
+	CertFilePath          string
+	KeyFilePath           string
+	IsClose               bool
+	AutoHttps             bool // 自动https
+	MultiAccount          *MultiAccount
 	Health
 	sync.RWMutex
 }

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"strconv"
 
 	"ehang.io/nps/lib/file"
 	"ehang.io/nps/server"
@@ -92,7 +93,7 @@ func (s *IndexController) GetTunnelV2() {
 	taskType := s.getEscapeString("type")
 	clientId := s.GetIntNoErr("client_id")
 	fmt.Println("GetTunnelV2 clientId:", clientId)
-	accountId := s.GetSessionIntNoErr("accountId")
+	accountId := s.GetSessionIntNoErr("accountId", 0)
 	fmt.Println("GetTunnelV2 accountId:", accountId)
 	list, cnt := server.GetTunnelV2(start, length, taskType, accountId, clientId, s.getEscapeString("search"), s.getEscapeString("sort"), s.getEscapeString("order"))
 	s.AjaxTable(list, cnt, cnt, nil)
@@ -122,6 +123,11 @@ func (s *IndexController) Add() {
 
 		if t.Port <= 0 {
 			t.Port = tool.GenerateServerPort(t.Mode)
+		}
+		if t.Mode == "http" || t.Mode == "https" {
+			t.ExternalServiceDomain = t.Mode + "://" + strconv.Itoa(t.Port) + "." + beego.AppConfig.String("external_service_domain")
+		} else {
+			t.ExternalServiceDomain = beego.AppConfig.String("external_service_ip") + ":" + strconv.Itoa(t.Port)
 		}
 
 		if !tool.TestServerPort(t.Port, t.Mode) {
@@ -187,6 +193,11 @@ func (s *IndexController) Edit() {
 					s.AjaxErr("The port cannot be opened because it may has been occupied or is no longer allowed.")
 					return
 				}
+			}
+			if t.Mode == "http" || t.Mode == "https" {
+				t.ExternalServiceDomain = t.Mode + "://" + strconv.Itoa(t.Port) + "." + beego.AppConfig.String("external_service_domain")
+			} else {
+				t.ExternalServiceDomain = beego.AppConfig.String("external_service_ip") + ":" + strconv.Itoa(t.Port)
 			}
 			t.ServerIp = s.getEscapeString("server_ip")
 			t.Mode = s.getEscapeString("type")

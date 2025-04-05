@@ -169,12 +169,12 @@ func (s *DbUtils) NewTask(t *Tunnel) error {
 		id, account_id, port, server_ip, mode, status, run_status, client_id, 
 		ports, password, remark, target_addr, no_store, is_http, local_path, 
 		strip_pre, header_change, host_change, location, host, scheme, 
-		cert_file_path, key_file_path, is_close, auto_https, target
+		cert_file_path, key_file_path, is_close, auto_https, target, external_service_domain
 	) VALUES (
 		?, ?, ?, ?, ?, ?, ?, ?, 
 		?, ?, ?, ?, ?, ?, ?, 
 		?, ?, ?, ?, ?, ?, 
-		?, ?, ?, ?, ?
+		?, ?, ?, ?, ?,?
 	)`
 
 	// 准备参数
@@ -189,7 +189,7 @@ func (s *DbUtils) NewTask(t *Tunnel) error {
 		t.Id, t.AccountId, t.Port, t.ServerIp, t.Mode, t.Status, t.RunStatus, t.ClientId,
 		t.Ports, t.Password, t.Remark, t.TargetAddr, t.NoStore, t.IsHttp, t.LocalPath,
 		t.StripPre, t.HeaderChange, t.HostChange, t.Location, t.Host, t.Scheme,
-		t.CertFilePath, t.KeyFilePath, t.IsClose, t.AutoHttps, targetStr,
+		t.CertFilePath, t.KeyFilePath, t.IsClose, t.AutoHttps, targetStr, t.ExternalServiceDomain,
 	)
 	return err
 }
@@ -201,7 +201,7 @@ func (s *DbUtils) UpdateTask(t *Tunnel) error {
 		account_id = ?, port = ?, server_ip = ?, mode = ?, status = ?, run_status = ?, client_id = ?,
 		ports = ?, password = ?, remark = ?, target_addr = ?, no_store = ?, is_http = ?, local_path = ?,
 		strip_pre = ?, header_change = ?, host_change = ?, location = ?, host = ?, scheme = ?,
-		cert_file_path = ?, key_file_path = ?, is_close = ?, auto_https = ?, target = ?
+		cert_file_path = ?, key_file_path = ?, is_close = ?, auto_https = ?, target = ? , external_service_domain = ?
 		WHERE id = ?`
 
 	// 准备参数
@@ -216,7 +216,7 @@ func (s *DbUtils) UpdateTask(t *Tunnel) error {
 		t.AccountId, t.Port, t.ServerIp, t.Mode, t.Status, t.RunStatus, t.ClientId,
 		t.Ports, t.Password, t.Remark, t.TargetAddr, t.NoStore, t.IsHttp, t.LocalPath,
 		t.StripPre, t.HeaderChange, t.HostChange, t.Location, t.Host, t.Scheme,
-		t.CertFilePath, t.KeyFilePath, t.IsClose, t.AutoHttps, targetStr,
+		t.CertFilePath, t.KeyFilePath, t.IsClose, t.AutoHttps, targetStr, t.ExternalServiceDomain,
 		t.Id,
 	)
 	return err
@@ -275,7 +275,7 @@ func (s *DbUtils) GetTask(id int) (*Tunnel, error) {
 		id, account_id, port, server_ip, mode, status, run_status, client_id, 
 		ports, password, remark, target_addr, no_store, is_http, local_path, 
 		strip_pre, header_change, host_change, location, host, scheme, 
-		cert_file_path, key_file_path, is_close, auto_https, IFNULL(target, '')
+		cert_file_path, key_file_path, is_close, auto_https, IFNULL(target, ''),external_service_domain
 		FROM tasks WHERE id = ? LIMIT 1`
 
 	fmt.Println("SQL Query:", query, "with parameter:", id)
@@ -289,7 +289,7 @@ func (s *DbUtils) GetTask(id int) (*Tunnel, error) {
 		&t.Id, &t.AccountId, &t.Port, &t.ServerIp, &t.Mode, &t.Status, &t.RunStatus, &t.ClientId,
 		&t.Ports, &t.Password, &t.Remark, &t.TargetAddr, &t.NoStore, &t.IsHttp, &t.LocalPath,
 		&t.StripPre, &t.HeaderChange, &t.HostChange, &t.Location, &t.Host, &t.Scheme,
-		&t.CertFilePath, &t.KeyFilePath, &t.IsClose, &t.AutoHttps, &t.Target.TargetStr,
+		&t.CertFilePath, &t.KeyFilePath, &t.IsClose, &t.AutoHttps, &t.Target.TargetStr, t.ExternalServiceDomain,
 	); err != nil {
 		return nil, errors.New("not found")
 	}
