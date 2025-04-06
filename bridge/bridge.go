@@ -227,11 +227,12 @@ func (s *Bridge) cliProcess(c *conn.Conn) {
 		return
 	}
 	//write server version to client
-	c.Write([]byte(crypt.Md5(version.GetVersion())))
+	c.WriteLenContent([]byte(crypt.Md5(version.GetVersion())))
 	c.SetReadDeadlineBySecond(5)
 	var buf []byte
 	//get vKey from client
-	if buf, err = c.GetShortContent(64); err != nil {
+	if buf, err = c.GetShortLenContent(); err != nil {
+		logs.Error(err)
 		c.Close()
 		return
 	}

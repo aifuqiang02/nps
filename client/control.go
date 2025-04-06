@@ -228,9 +228,9 @@ func NewConn(tp string, vkey string, server string, connType string, proxyUrl st
 			} else {
 				logs.Debug("NewConn - 5")
 				connection, err = net.Dial("tcp", server)
-				logs.Debug("NewConn - 6 - %s ", err)
+				logs.Debug("NewConn - 6 ")
 			}
-
+			logs.Debug("NewConn - 7 ")
 			//header := &proxyproto.Header{
 			//	Version:           1,
 			//	Command:           proxyproto.PROXY,
@@ -255,41 +255,68 @@ func NewConn(tp string, vkey string, server string, connType string, proxyUrl st
 			connection = sess
 		}
 	}
+	logs.Debug("NewConn - 8")
 	if err != nil {
+		logs.Error("Failed to establish connection to server:", err)
 		return nil, err
 	}
+	logs.Info("Successfully connected to server:", server)
 	connection.SetDeadline(time.Now().Add(time.Second * 10))
 	defer connection.SetDeadline(time.Time{})
 	c := conn.NewConn(connection)
+
+	logs.Debug("Sending CONN_TEST to server")
 	if _, err := c.Write([]byte(common.CONN_TEST)); err != nil {
-		return nil, err
-	}
-	if err := c.WriteLenContent([]byte(version.GetVersion())); err != nil {
-		return nil, err
-	}
-	if err := c.WriteLenContent([]byte(version.VERSION)); err != nil {
-		return nil, err
-	}
-	b, err := c.GetShortContent(64)
-	logs.Debug("NewConn %s --- %s", b, err)
-	if err != nil {
-		logs.Error(err)
+		logs.Error("Failed to send CONN_TEST:", err)
 		return nil, err
 	}
 
+	logs.Debug("Sending core version to server:", version.GetVersion())
+	if err := c.WriteLenContent([]byte(version.GetVersion())); err != nil {
+		logs.Error("Failed to send core version:", err)
+		return nil, err
+	}
+
+	logs.Debug("Sending client version to server:", version.VERSION)
+	if err := c.WriteLenContent([]byte(version.VERSION)); err != nil {
+		logs.Error("Failed to send client version:", err)
+		return nil, err
+	}
+
+	logs.Debug("Waiting for server response...")
+	b, err := c.GetShortLenContent()
+	logs.Debug("Server response: %s, error: %v", b, err)
+	if err != nil {
+		logs.Error("Failed to get server response:", err)
+		return nil, err
+	}
+	logs.Debug("Server response2: %s, error: %v", b, err)
 	if crypt.Md5(version.GetVersion()) != string(b) {
+		logs.Debug("Server response3: %s, error: %v", b, err)
+		logs.Warn("Version mismatch: client(%s) != server(%s)", version.GetVersion(), string(b))
 		//logs.Error("The client does not match the server version. The current core version of the client is", version.GetVersion())
 		//return nil, err
 	}
-	if _, err := c.Write([]byte(common.Getverifyval(vkey))); err != nil {
+
+	logs.Debug("Sending verify key to server")
+	if err := c.WriteLenContent([]byte(vkey)); err != nil {
+		logs.Error("Failed to send verify key:", err)
 		return nil, err
 	}
+
+	logs.Debug("Waiting for verify response...")
 	if s, err := c.ReadFlag(); err != nil {
+		logs.Error("Failed to read verify response:", err)
 		return nil, err
 	} else if s == common.VERIFY_EER {
-		return nil, errors.New(fmt.Sprintf("Validation key %s incorrect", vkey))
+		errMsg := fmt.Sprintf("Validation key %s incorrect", vkey)
+		logs.Error(errMsg)
+		return nil, errors.New(errMsg)
 	}
+
+	logs.Debug("Sending connection type to server:", connType)
 	if _, err := c.Write([]byte(connType)); err != nil {
+		logs.Error("Failed to send connection type:", err)
 		return nil, err
 	}
 	c.SetAlive(tp)
