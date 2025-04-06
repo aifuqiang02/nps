@@ -231,10 +231,11 @@ func (s *Bridge) cliProcess(c *conn.Conn) {
 	c.SetReadDeadlineBySecond(5)
 	var buf []byte
 	//get vKey from client
-	if buf, err = c.GetShortContent(32); err != nil {
+	if buf, err = c.GetShortContent(64); err != nil {
 		c.Close()
 		return
 	}
+	logs.Info("vKey %s:", string(buf))
 	//verify
 	id, err := file.GetDb().GetIdByVerifyKey(string(buf), c.Conn.RemoteAddr().String())
 	if err != nil {
@@ -308,7 +309,7 @@ func (s *Bridge) typeDeal(typeVal string, c *conn.Conn, id int, vs string) {
 	case common.WORK_REGISTER:
 		go s.register(c)
 	case common.WORK_SECRET:
-		if b, err := c.GetShortContent(32); err == nil {
+		if b, err := c.GetShortContent(64); err == nil {
 			s.SecretChan <- conn.NewSecret(string(b), c)
 		} else {
 			logs.Error("secret error, failed to match the key successfully")
@@ -320,7 +321,7 @@ func (s *Bridge) typeDeal(typeVal string, c *conn.Conn, id int, vs string) {
 		}
 	case common.WORK_P2P:
 		//read md5 secret
-		if b, err := c.GetShortContent(32); err != nil {
+		if b, err := c.GetShortContent(64); err != nil {
 			logs.Error("p2p error,", err.Error())
 		} else if t := file.GetDb().GetTaskByMd5Password(string(b)); t == nil {
 			logs.Error("p2p error, failed to match the key successfully")
@@ -441,7 +442,7 @@ loop:
 		}
 		switch flag {
 		case common.WORK_STATUS:
-			if b, err := c.GetShortContent(32); err != nil {
+			if b, err := c.GetShortContent(64); err != nil {
 				break loop
 			} else {
 				var str string

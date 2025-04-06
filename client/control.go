@@ -198,7 +198,9 @@ func NewConn(tp string, vkey string, server string, connType string, proxyUrl st
 	var err error
 	var connection net.Conn
 	var sess *kcp.UDPSession
+	logs.Debug("NewConn - 1")
 	if tp == "tcp" {
+		logs.Debug("NewConn - 2")
 		if proxyUrl != "" {
 			u, er := url.Parse(proxyUrl)
 			if er != nil {
@@ -215,14 +217,18 @@ func NewConn(tp string, vkey string, server string, connType string, proxyUrl st
 				connection, err = NewHttpProxyConn(u, server)
 			}
 		} else {
+			logs.Debug("NewConn - 3")
 			if GetTlsEnable() {
+				logs.Debug("NewConn - 4")
 				//tls 流量加密
 				conf := &tls.Config{
 					InsecureSkipVerify: true,
 				}
 				connection, err = tls.Dial("tcp", server, conf)
 			} else {
+				logs.Debug("NewConn - 5")
 				connection, err = net.Dial("tcp", server)
+				logs.Debug("NewConn - 6 - %s ", err)
 			}
 
 			//header := &proxyproto.Header{
@@ -264,11 +270,13 @@ func NewConn(tp string, vkey string, server string, connType string, proxyUrl st
 	if err := c.WriteLenContent([]byte(version.VERSION)); err != nil {
 		return nil, err
 	}
-	b, err := c.GetShortContent(32)
+	b, err := c.GetShortContent(64)
+	logs.Debug("NewConn %s --- %s", b, err)
 	if err != nil {
 		logs.Error(err)
 		return nil, err
 	}
+
 	if crypt.Md5(version.GetVersion()) != string(b) {
 		//logs.Error("The client does not match the server version. The current core version of the client is", version.GetVersion())
 		//return nil, err

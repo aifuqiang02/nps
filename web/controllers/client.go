@@ -78,8 +78,16 @@ func (s *ClientController) Add() {
 				s.AjaxErr(err.Error())
 			}
 		}
-
-		s.AjaxOkWithId("add success", clientId)
+		rs := make(map[string]interface{})
+		data := make(map[string]interface{})
+		data["clientId"] = clientId
+		data["vkey"] = vkey
+		data["server"] = beego.AppConfig.String("external_service_ip") + ":" + beego.AppConfig.String("bridge_port")
+		rs["code"] = 200
+		rs["data"] = data
+		s.Data["json"] = rs
+		s.ServeJSON()
+		s.StopRun()
 	}
 }
 func (s *ClientController) GetClient() {
@@ -87,13 +95,14 @@ func (s *ClientController) GetClient() {
 		id := s.GetIntNoErr("id")
 		data := make(map[string]interface{})
 		if c, err := file.GetDb().GetClient(id); err != nil {
-			data["code"] = 0
+			data["code"] = 400
 		} else {
-			data["code"] = 1
+			data["code"] = 200
 			data["data"] = c
 		}
 		s.Data["json"] = data
 		s.ServeJSON()
+		s.StopRun()
 	}
 }
 
