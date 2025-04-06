@@ -78,12 +78,6 @@ func (s *BaseServer) CheckFlowAndConnNum(client *file.Client) error {
 	if client == nil {
 		return errors.New("client is nil")
 	}
-	if client.Flow == nil {
-		client.Flow = &file.Flow{}
-	}
-	if client.Cnf == nil {
-		client.Cnf = &file.Config{}
-	}
 	if client.Flow.FlowLimit > 0 && (client.Flow.FlowLimit<<20) < (client.Flow.ExportFlow+client.Flow.InletFlow) {
 		return errors.New("Traffic exceeded")
 	}
