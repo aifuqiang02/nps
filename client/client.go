@@ -156,12 +156,15 @@ func (s *TRPClient) newUdpConn(localAddr, rAddr string, md5Password string) {
 
 // pmux tunnel
 func (s *TRPClient) newChan() {
+	logs.Debug("newChan 1")
 	tunnel, err := NewConn(s.bridgeConnType, s.vKey, s.svrAddr, common.WORK_CHAN, s.proxyUrl)
 	if err != nil {
 		logs.Error("connect to ", s.svrAddr, "error:", err)
 		return
 	}
+	logs.Debug("newChan 2")
 	s.tunnel = nps_mux.NewMux(tunnel.Conn, s.bridgeConnType, s.disconnectTime)
+	logs.Debug("newChan 3")
 	for {
 		src, err := s.tunnel.Accept()
 		if err != nil {
@@ -171,6 +174,7 @@ func (s *TRPClient) newChan() {
 		}
 		go s.handleChan(src)
 	}
+	logs.Debug("newChan 4")
 }
 
 func (s *TRPClient) handleChan(src net.Conn) {

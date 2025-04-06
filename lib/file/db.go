@@ -106,7 +106,7 @@ func (s *DbUtils) GetClientList(start, length int, search, sortField, order stri
 		panic(err)
 	}
 	// 查询数据
-	query := fmt.Sprintf("SELECT id, verify_key, remark, IFNULL(inlet_flow, 0) FROM clients %s ORDER BY %s %s LIMIT %d, %d", where, sortField, order, start, length)
+	query := fmt.Sprintf("SELECT id, verify_key, remark, IFNULL(inlet_flow, 0) as inlet_flow,status FROM clients %s ORDER BY %s %s LIMIT %d, %d", where, sortField, order, start, length)
 	fmt.Println("SQL Query for data:", query)
 	rows, err := s.SqlDB.Query(query)
 	if err != nil {
@@ -117,7 +117,7 @@ func (s *DbUtils) GetClientList(start, length int, search, sortField, order stri
 	for rows.Next() {
 		var c Client
 		var inletFlow int64
-		if err := rows.Scan(&c.Id, &c.VerifyKey, &c.Remark, &inletFlow); err != nil {
+		if err := rows.Scan(&c.Id, &c.VerifyKey, &c.Remark, &inletFlow, &c.Status); err != nil {
 			panic(err)
 		}
 		if c.Flow == nil {

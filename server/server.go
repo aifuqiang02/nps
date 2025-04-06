@@ -385,7 +385,7 @@ func GetTunnelV2(start, length int, typeVal string, accountId int, clientId int,
 // get client list
 func GetClientList(start, length int, search, sort, order string, clientId int) (list []*file.Client, cnt int) {
 	list, cnt = file.GetDb().GetClientList(start, length, search, sort, order, clientId)
-	dealClientData()
+	SetClientStatus(list)
 	return
 }
 
@@ -397,6 +397,12 @@ func dealClientData() {
 		return
 	}
 
+	SetClientStatus(clients)
+	logs.Debug(clients)
+	logs.Debug("dealClientData")
+}
+
+func SetClientStatus(clients []*file.Client) {
 	for _, v := range clients {
 		if vv, ok := Bridge.Client.Load(v.Id); ok {
 			v.IsConnect = true
@@ -483,11 +489,10 @@ func GetDashboardData() map[string]interface{} {
 	dealClientData()
 	c := 0
 	var in, out int64
-	clients, err := file.GetDb().GetAllClients()
 	if err != nil {
 		logs.Error("Failed to get clients for dashboard:", err)
 	} else {
-		for _, v := range clients {
+		for _, v := range allClients {
 			if v.IsConnect {
 				c++
 			}
