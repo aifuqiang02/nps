@@ -26,12 +26,25 @@ type BaseController struct {
 	actionName     string
 }
 
+func (s *BaseController) TokenFail() {
+	s.Ctx.Output.SetStatus(401)
+	s.Data["json"] = map[string]interface{}{
+		"code": 401,
+		"msg":  "Invalid or expired token",
+	}
+	s.ServeJSON()
+	s.StopRun()
+}
+
 // 初始化参数
 func (s *BaseController) Prepare() {
 	s.Data["web_base_url"] = beego.AppConfig.String("web_base_url")
 	controllerName, actionName := s.GetControllerAndAction()
 	s.controllerName = strings.ToLower(controllerName[0 : len(controllerName)-10])
 	s.actionName = strings.ToLower(actionName)
+
+	md5Key := s.getEscapeString("auth_key")
+
 	// web api verify
 	// support both token and session auth
 	authToken := s.Ctx.Input.Header("Authorization")
@@ -43,11 +56,17 @@ func (s *BaseController) Prepare() {
 			// Set common configs for both token and session auth
 			s.setCommonConfigs()
 			return
+		} else {
+			s.TokenFail()
+			return
 		}
+	} else if authToken == "" && s.GetSession("username") == nil {
+		s.TokenFail()
+		return
 	}
 
 	// check old auth method
-	md5Key := s.getEscapeString("auth_key")
+
 	timestamp := s.GetIntNoErr("timestamp")
 	configKey := beego.AppConfig.String("auth_key")
 	if configKey == "" {

@@ -94,10 +94,11 @@ func (self *LoginController) doLogin(username, password string, explicit bool) b
 	}
 	fmt.Println("doLogin3:")
 	b, err := beego.AppConfig.Bool("allow_user_login")
+	account, err := file.GetDb().GetByUsername(username)
 	fmt.Println("doLogin31:", err, b, auth)
 	if err == nil && b && !auth {
 		fmt.Println("doLogin4:")
-		account, err := file.GetDb().GetByUsername(username)
+
 		fmt.Println("doLogin5:")
 		if err != nil {
 			logs.Error("Failed to get account from MySQL:", err)
@@ -125,6 +126,8 @@ func (self *LoginController) doLogin(username, password string, explicit bool) b
 	if auth {
 		fmt.Println("doLogin61:")
 		self.SetSession("auth", true)
+		self.SetSession("clientId", account.Id)
+		self.SetSession("username", account.WebUserName)
 		ipRecord.Delete(ip)
 		fmt.Println("doLogin62:")
 		return true
