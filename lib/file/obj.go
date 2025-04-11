@@ -248,6 +248,20 @@ type MultiAccount struct {
 	AccountMap map[string]string // multi account and pwd
 }
 
+type Order struct {
+	OrderId               int64   `json:"order_id"`                // 订单ID，主键
+	AppId                 string  `json:"app_id"`                  // 关联的应用ID
+	OrderAmount           float64 `json:"order_amount"`            // 订单金额
+	Flow                  float64 `json:"flow"`                    // 订单金额
+	Months                int     `json:"months"`                  // 月数
+	OrderStatus           string  `json:"order_status"`            // 订单状态
+	PaymentType           string  `json:"payment_type"`            // 支付方式
+	ExternalTransactionId string  `json:"external_transaction_id"` // 外部交易号
+	CreatedAt             int64   `json:"created_at"`              // 创建时间
+	AccountId             string  `json:"account_id"`              // 用户账号
+	sync.RWMutex
+}
+
 func (s *Target) GetRandomTarget() (string, error) {
 	if s.TargetArr == nil {
 		s.TargetArr = strings.Split(s.TargetStr, "\n")

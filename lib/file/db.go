@@ -515,6 +515,44 @@ func (s *DbUtils) GetNewHostId() int {
 	return id
 }
 
+func (s *DbUtils) CreateOrder(order *Order) error {
+	insertQuery := `INSERT INTO orders (
+		app_id, order_amount, months, order_status, 
+		payment_type, external_transaction_id,  account_id
+	) VALUES ( ?, ?, ?, ?, ?, ?,?)`
+
+	_, err := s.SqlDB.Exec(
+		insertQuery,
+		order.AppId, order.OrderAmount, order.Months, order.OrderStatus,
+		order.PaymentType, order.ExternalTransactionId, order.AccountId,
+	)
+	return err
+}
+
+func (s *DbUtils) GetOrderById(orderId int64) (*Order, error) {
+	query := `SELECT 
+		order_id, app_id, order_amount, months, order_status,
+		payment_type, external_transaction_id, created_at, account_id
+		FROM orders WHERE order_id = ? LIMIT 1`
+
+	var order Order
+	err := s.SqlDB.QueryRow(query, orderId).Scan(
+		&order.OrderId, &order.AppId, &order.OrderAmount, &order.Months, &order.OrderStatus,
+		&order.PaymentType, &order.ExternalTransactionId, &order.CreatedAt, &order.AccountId,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &order, nil
+}
+
+func (s *DbUtils) GetNewOrderId() int64 {
+	query := "SELECT IFNULL(MAX(order_id), 0) + 1 FROM orders"
+	var id int64
+	s.SqlDB.QueryRow(query).Scan(&id)
+	return id
+}
+
 func (s *DbUtils) GetAllTasks() ([]*Tunnel, error) {
 	// 查询所有任务记录，使用完整的字段列表
 	query := `SELECT 

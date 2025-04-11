@@ -374,21 +374,38 @@ func (s *IndexController) CreatePaymentOrder() {
 	paymentType := s.getEscapeString("paymentType")
 	months := s.GetIntNoErr("months")
 	flow := s.GetIntNoErr("flow")
+	accountId := s.GetSessionIntNoErr("accountId", 0)
 
-	// 生成订单号
-	orderNo := fmt.Sprintf("PAY%s%d", time.Now().Format("20060102150405"), rand.Intn(1000))
+	// 创建订单对象
+	order := &file.Order{
+		AppId:                 "b8e47ca842ac4ce18d4e17b5bee46f91",
+		OrderAmount:           float64(flow),
+		Flow:                  float64(flow),
+		Months:                months,
+		OrderStatus:           "pending",
+		PaymentType:           paymentType,
+		ExternalTransactionId: fmt.Sprintf("PAY%s%d", time.Now().Format("20060102150405"), rand.Intn(1000)),
+		AccountId:             strconv.Itoa(accountId),
+	}
 
-	// 创建订单数据
+	// 保存订单到数据库
+	if err := file.GetDb().CreateOrder(order); err != nil {
+		s.AjaxErr("创建订单失败: " + err.Error())
+		return
+	}
+
+	// 返回订单信息
 	data := make(map[string]interface{})
 	data["code"] = 1
 	data["msg"] = "订单创建成功"
 	data["data"] = map[string]interface{}{
-		"orderNo":     orderNo,
-		"paymentType": paymentType,
-		"months":      months,
-		"flow":        flow,
-		"status":      "pending",
-		"createTime":  time.Now().Unix(),
+		"orderId":               order.OrderId,
+		"paymentType":           order.PaymentType,
+		"months":                order.Months,
+		"flow":                  order.OrderAmount,
+		"status":                order.OrderStatus,
+		"createTime":            order.CreatedAt,
+		"externalTransactionId": order.ExternalTransactionId,
 	}
 
 	s.Data["json"] = data
