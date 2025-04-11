@@ -2,7 +2,9 @@ package controllers
 
 import (
 	"fmt"
+	"math/rand"
 	"strconv"
+	"time"
 
 	"ehang.io/nps/lib/file"
 	"ehang.io/nps/server"
@@ -366,4 +368,29 @@ func (s *IndexController) EditHost() {
 		}
 		s.AjaxOk("modified success")
 	}
+}
+
+func (s *IndexController) CreatePaymentOrder() {
+	paymentType := s.getEscapeString("paymentType")
+	months := s.GetIntNoErr("months")
+	flow := s.GetIntNoErr("flow")
+
+	// 生成订单号
+	orderNo := fmt.Sprintf("PAY%s%d", time.Now().Format("20060102150405"), rand.Intn(1000))
+
+	// 创建订单数据
+	data := make(map[string]interface{})
+	data["code"] = 1
+	data["msg"] = "订单创建成功"
+	data["data"] = map[string]interface{}{
+		"orderNo":     orderNo,
+		"paymentType": paymentType,
+		"months":      months,
+		"flow":        flow,
+		"status":      "pending",
+		"createTime":  time.Now().Unix(),
+	}
+
+	s.Data["json"] = data
+	s.ServeJSON()
 }
