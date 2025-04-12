@@ -518,13 +518,13 @@ func (s *DbUtils) GetNewHostId() int {
 func (s *DbUtils) CreateOrder(order *Order) error {
 	insertQuery := `INSERT INTO orders (
 		app_id, order_amount, months, order_status, 
-		payment_type, external_transaction_id,  account_id
-	) VALUES ( ?, ?, ?, ?, ?, ?,?)`
+		payment_type, external_transaction_id,  account_id,flow
+	) VALUES ( ?, ?, ?, ?, ?, ?,?,?)`
 
 	_, err := s.SqlDB.Exec(
 		insertQuery,
 		order.AppId, order.OrderAmount, order.Months, order.OrderStatus,
-		order.PaymentType, order.ExternalTransactionId, order.AccountId,
+		order.PaymentType, order.ExternalTransactionId, order.AccountId, order.Flow,
 	)
 	return err
 }
@@ -890,14 +890,20 @@ func (s *DbUtils) UpdateOrder(order *Order) error {
 
 // AddTraffic 给账号添加流量(GB)
 func (s *DbUtils) AddTraffic(accountId int, flow float64) error {
-	query := "UPDATE accounts SET flow = flow + ? WHERE id = ?"
+	query := "UPDATE accounts SET flow = (CASE WHEN flow is null or flow <0 then 0 else flow end) + ? WHERE id = ?"
 	_, err := s.SqlDB.Exec(query, flow, accountId)
 	return err
 }
 
 // AddMonths 给账号添加月数
 func (s *DbUtils) AddMonths(accountId int, months int) error {
-	query := "UPDATE accounts SET expire_time = DATE_ADD(IFNULL(expire_time, NOW()), INTERVAL ? MONTH) WHERE id = ?"
+	query := `UPDATE accounts SET expire_time = DATE_ADD(
+		CASE 
+			WHEN expire_time IS NULL OR expire_time < NOW() THEN NOW()
+			ELSE expire_time 
+		END, 
+		INTERVAL ? MONTH
+	) WHERE id = ?`
 	_, err := s.SqlDB.Exec(query, months, accountId)
 	return err
 }
