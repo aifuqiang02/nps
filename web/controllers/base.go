@@ -42,7 +42,9 @@ func (s *BaseController) Prepare() {
 	controllerName, actionName := s.GetControllerAndAction()
 	s.controllerName = strings.ToLower(controllerName[0 : len(controllerName)-10])
 	s.actionName = strings.ToLower(actionName)
-
+	if "paymentcallback" == s.actionName {
+		return
+	}
 	md5Key := s.getEscapeString("auth_key")
 
 	// web api verify

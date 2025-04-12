@@ -54,6 +54,10 @@ func (s *IndexController) PaymentCallback() {
 		s.AjaxErr("订单不存在")
 		return
 	}
+	if order.OrderStatus == "paid" {
+		s.AjaxErr("订单已完成")
+		return
+	}
 
 	// 更新订单状态
 	order.OrderStatus = "paid"
