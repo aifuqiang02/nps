@@ -806,45 +806,6 @@ func (s *DbUtils) GetHostById(id int) (*Host, error) {
 	return &h, nil
 }
 
-func (s *DbUtils) UpdateHost(h *Host) error {
-	// 使用完整的字段列表更新host记录
-	query := `UPDATE tasks SET 
-		host = ?, location = ?, scheme = ?, remark = ?, client_id = ?,
-		no_store = ?, is_close = ?, auto_https = ?, target = ?
-		WHERE id = ?`
-
-	// 准备参数
-	targetStr := ""
-	if h.Target != nil {
-		targetStr = h.Target.TargetStr
-	}
-
-	clientId := 0
-	if h.Client != nil {
-		clientId = h.Client.Id
-	}
-
-	fmt.Println("SQL Exec:", query, "with parameters:", h.Host, h.Location, h.Scheme, h.Remark, clientId)
-
-	tx, err := s.SqlDB.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	_, err = tx.Exec(
-		query,
-		h.Host, h.Location, h.Scheme, h.Remark, clientId,
-		h.NoStore, h.IsClose, h.AutoHttps, targetStr,
-		h.Id,
-	)
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit()
-}
-
 // GetInfoByHost 根据请求中的 host 与 URL 信息返回匹配的 host 记录
 func (s *DbUtils) GetInfoByHost(host string, r *http.Request) (*Host, error) {
 	ip := common.GetIpByAddr(host)
@@ -900,4 +861,82 @@ func (s *DbUtils) GetInfoByHost(host string, r *http.Request) (*Host, error) {
 		return selected, nil
 	}
 	return nil, errors.New("The host could not be parsed")
+}
+
+// GetOrderByExternalId 根据外部交易ID获取订单
+func (s *DbUtils) GetOrderByExternalId(externalId string) (*Order, error) {
+	query := `SELECT 
+		order_id, app_id, order_amount, flow, months, order_status,
+		payment_type, external_transaction_id, account_id
+		FROM orders WHERE external_transaction_id = ? LIMIT 1`
+
+	var order Order
+	err := s.SqlDB.QueryRow(query, externalId).Scan(
+		&order.OrderId, &order.AppId, &order.OrderAmount, &order.Flow, &order.Months, &order.OrderStatus,
+		&order.PaymentType, &order.ExternalTransactionId, &order.AccountId,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &order, nil
+}
+
+// UpdateOrder 更新订单状态
+func (s *DbUtils) UpdateOrder(order *Order) error {
+	query := "UPDATE orders SET order_status = ? WHERE external_transaction_id = ?"
+	_, err := s.SqlDB.Exec(query, order.OrderStatus, order.ExternalTransactionId)
+	return err
+}
+
+// AddTraffic 给账号添加流量(GB)
+func (s *DbUtils) AddTraffic(accountId int, flow float64) error {
+	query := "UPDATE accounts SET flow = flow + ? WHERE id = ?"
+	_, err := s.SqlDB.Exec(query, flow, accountId)
+	return err
+}
+
+// AddMonths 给账号添加月数
+func (s *DbUtils) AddMonths(accountId int, months int) error {
+	query := "UPDATE accounts SET expire_time = DATE_ADD(IFNULL(expire_time, NOW()), INTERVAL ? MONTH) WHERE id = ?"
+	_, err := s.SqlDB.Exec(query, months, accountId)
+	return err
+}
+
+func (s *DbUtils) UpdateHost(h *Host) error {
+	// 使用完整的字段列表更新host记录
+	query := `UPDATE tasks SET 
+		host = ?, location = ?, scheme = ?, remark = ?, client_id = ?,
+		no_store = ?, is_close = ?, auto_https = ?, target = ?
+		WHERE id = ?`
+
+	// 准备参数
+	targetStr := ""
+	if h.Target != nil {
+		targetStr = h.Target.TargetStr
+	}
+
+	clientId := 0
+	if h.Client != nil {
+		clientId = h.Client.Id
+	}
+
+	fmt.Println("SQL Exec:", query, "with parameters:", h.Host, h.Location, h.Scheme, h.Remark, clientId)
+
+	tx, err := s.SqlDB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec(
+		query,
+		h.Host, h.Location, h.Scheme, h.Remark, clientId,
+		h.NoStore, h.IsClose, h.AutoHttps, targetStr,
+		h.Id,
+	)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }

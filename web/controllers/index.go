@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -427,4 +428,57 @@ func (s *IndexController) CreatePaymentOrder() {
 
 	s.Data["json"] = data
 	s.ServeJSON()
+}
+
+func (s *IndexController) PaymentCallback() {
+	// 解析JSON参数
+	type CallbackRequest struct {
+		ExternalTransactionId string `json:"externalTransactionId"`
+		Secret                string `json:"secret"`
+	}
+	externalTransactionId := s.Ctx.Input.GetData("externalTransactionId")
+	fmt.Println(externalTransactionId)
+	var req CallbackRequest
+	if err := json.Unmarshal(s.Ctx.Input.RequestBody, &req); err != nil {
+		s.AjaxErr("参数解析失败")
+		return
+	}
+
+	// 验证secret
+	if req.Secret != "b8e47ca842ac4ce18d4e17b5bee46f911111111" {
+		s.AjaxErr("无效的secret")
+		return
+	}
+
+	// 查询订单
+	order, err := file.GetDb().GetOrderByExternalId(req.ExternalTransactionId)
+	if err != nil {
+		s.AjaxErr("订单不存在")
+		return
+	}
+
+	// 更新订单状态
+	order.OrderStatus = "paid"
+	if err := file.GetDb().UpdateOrder(order); err != nil {
+		s.AjaxErr("订单状态更新失败")
+		return
+	}
+
+	// 执行账号充值逻辑
+	accountId, _ := strconv.Atoi(order.AccountId)
+	if order.PaymentType == "traffic" {
+		// 流量充值逻辑
+		if err := file.GetDb().AddTraffic(accountId, order.Flow); err != nil {
+			s.AjaxErr("流量充值失败")
+			return
+		}
+	} else {
+		// 月费充值逻辑
+		if err := file.GetDb().AddMonths(accountId, order.Months); err != nil {
+			s.AjaxErr("月费充值失败")
+			return
+		}
+	}
+
+	s.AjaxOk("处理成功")
 }
