@@ -323,6 +323,19 @@ func (s *IndexController) AddHost() {
 	}
 }
 
+func (s *IndexController) GetPricePlan() {
+	data := map[string]interface{}{
+		"code": 200,
+		"msg":  "success",
+		"data": map[string]float64{
+			"pricePerGB":    1, // 每GB流量价格
+			"pricePerMonth": 5, // 每月基础费用
+		},
+	}
+	s.Data["json"] = data
+	s.ServeJSON()
+}
+
 func (s *IndexController) EditHost() {
 	id := s.GetIntNoErr("id")
 	if s.Ctx.Request.Method == "GET" {
@@ -376,10 +389,22 @@ func (s *IndexController) CreatePaymentOrder() {
 	flow := s.GetIntNoErr("flow")
 	accountId := s.GetSessionIntNoErr("accountId", 0)
 
+	// 获取价格配置
+	pricePerGB := 1.0    // 每GB流量价格(元)
+	pricePerMonth := 5.0 // 每月基础费用(元)
+
+	// 计算订单金额
+	var orderAmount float64
+	if paymentType == "traffic" {
+		orderAmount = float64(flow) * pricePerGB
+	} else {
+		orderAmount = float64(months) * pricePerMonth
+	}
+
 	// 创建订单对象
 	order := &file.Order{
 		AppId:                 "b8e47ca842ac4ce18d4e17b5bee46f91",
-		OrderAmount:           float64(flow),
+		OrderAmount:           orderAmount,
 		Flow:                  float64(flow),
 		Months:                months,
 		OrderStatus:           "pending",
@@ -396,15 +421,14 @@ func (s *IndexController) CreatePaymentOrder() {
 
 	// 返回订单信息
 	data := make(map[string]interface{})
-	data["code"] = 1
+	data["code"] = 200
 	data["msg"] = "订单创建成功"
 	data["data"] = map[string]interface{}{
-		"orderId":               order.OrderId,
-		"paymentType":           order.PaymentType,
+		"orderAmount":           order.OrderAmount,
+		"flow":                  order.Flow,
 		"months":                order.Months,
-		"flow":                  order.OrderAmount,
-		"status":                order.OrderStatus,
-		"createTime":            order.CreatedAt,
+		"paymentType":           order.PaymentType,
+		"appId":                 order.AppId,
 		"externalTransactionId": order.ExternalTransactionId,
 	}
 
