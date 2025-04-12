@@ -323,19 +323,6 @@ func (s *IndexController) AddHost() {
 	}
 }
 
-func (s *IndexController) GetPricePlan() {
-	data := map[string]interface{}{
-		"code": 200,
-		"msg":  "success",
-		"data": map[string]float64{
-			"pricePerGB":    1, // 每GB流量价格
-			"pricePerMonth": 5, // 每月基础费用
-		},
-	}
-	s.Data["json"] = data
-	s.ServeJSON()
-}
-
 func (s *IndexController) EditHost() {
 	id := s.GetIntNoErr("id")
 	if s.Ctx.Request.Method == "GET" {
@@ -383,22 +370,31 @@ func (s *IndexController) EditHost() {
 	}
 }
 
+func (s *IndexController) GetPricePlan() {
+	data := map[string]interface{}{
+		"code": 200,
+		"msg":  "success",
+		"data": map[string]float64{
+			"pricePerGB":    1.0, // 每GB流量价格(元)
+			"pricePerMonth": 5.0, // 每月基础费用(元)
+		},
+	}
+	s.Data["json"] = data
+	s.ServeJSON()
+}
+
 func (s *IndexController) CreatePaymentOrder() {
 	paymentType := s.getEscapeString("paymentType")
 	months := s.GetIntNoErr("months")
 	flow := s.GetIntNoErr("flow")
 	accountId := s.GetSessionIntNoErr("accountId", 0)
 
-	// 获取价格配置
-	pricePerGB := 1.0    // 每GB流量价格(元)
-	pricePerMonth := 5.0 // 每月基础费用(元)
-
 	// 计算订单金额
 	var orderAmount float64
 	if paymentType == "traffic" {
-		orderAmount = float64(flow) * pricePerGB
+		orderAmount = float64(flow) * 1.0 // 每GB流量价格(元)
 	} else {
-		orderAmount = float64(months) * pricePerMonth
+		orderAmount = float64(months) * 5.0 // 每月基础费用(元)
 	}
 
 	// 创建订单对象
@@ -425,9 +421,6 @@ func (s *IndexController) CreatePaymentOrder() {
 	data["msg"] = "订单创建成功"
 	data["data"] = map[string]interface{}{
 		"orderAmount":           order.OrderAmount,
-		"flow":                  order.Flow,
-		"months":                order.Months,
-		"paymentType":           order.PaymentType,
 		"appId":                 order.AppId,
 		"externalTransactionId": order.ExternalTransactionId,
 	}
