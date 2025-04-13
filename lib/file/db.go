@@ -908,6 +908,25 @@ func (s *DbUtils) AddMonths(accountId int, months int) error {
 	return err
 }
 
+// GetAccountInfo 获取完整账户信息
+func (s *DbUtils) GetAccountInfo(accountId int) (*Account, error) {
+	query := "SELECT id, web_user_name, IFNULL(web_password, '') as web_password, flow, expire_time, rate_limit, remark FROM accounts WHERE id = ?"
+	var account Account
+	err := s.SqlDB.QueryRow(query, accountId).Scan(
+		&account.Id,
+		&account.WebUserName,
+		&account.WebPassword,
+		&account.Flow,
+		&account.ExpireTime,
+		&account.RateLimit,
+		&account.Remark,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("获取账户信息失败: %v", err)
+	}
+	return &account, nil
+}
+
 func (s *DbUtils) UpdateHost(h *Host) error {
 	// 使用完整的字段列表更新host记录
 	query := `UPDATE tasks SET 

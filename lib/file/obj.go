@@ -62,6 +62,7 @@ type Client struct {
 
 type Account struct {
 	Cnf             *Config
+	ExpireTime      string
 	Id              int        //id
 	Remark          string     //remark
 	Status          bool       //is allow connect

@@ -372,12 +372,27 @@ func (s *IndexController) EditHost() {
 }
 
 func (s *IndexController) GetPricePlan() {
+	accountId := s.GetSessionIntNoErr("accountId", 0)
+
+	// 查询用户账户信息
+	account, err := file.GetDb().GetAccountInfo(accountId)
+	if err != nil {
+		s.Data["json"] = map[string]interface{}{
+			"code": 500,
+			"msg":  err.Error(),
+		}
+		s.ServeJSON()
+		return
+	}
+
 	data := map[string]interface{}{
 		"code": 200,
 		"msg":  "success",
-		"data": map[string]float64{
-			"pricePerGB":    1.0, // 每GB流量价格(元)
-			"pricePerMonth": 5.0, // 每月基础费用(元)
+		"data": map[string]interface{}{
+			"pricePerGB":    1.0,                // 每GB流量价格(元)
+			"pricePerMonth": 5.0,                // 每月基础费用(元)
+			"userFlow":      account.Flow,       // 用户剩余流量(GB)
+			"expireTime":    account.ExpireTime, // 账号到期时间
 		},
 	}
 	s.Data["json"] = data
