@@ -911,17 +911,17 @@ func (s *DbUtils) AddMonths(accountId int, months int) error {
 
 // GetAccountInfo 获取完整账户信息
 func (s *DbUtils) GetAccountInfo(accountId int) (*Account, error) {
-	query := "SELECT id, web_user_name, IFNULL(web_password, '') as web_password, flow, expire_time, rate_limit, remark FROM accounts WHERE id = ?"
+	query := "SELECT id, web_user_name, IFNULL(web_password, '') as web_password, flow, IFNULL(expire_time, '') as expire_time, rate_limit, remark FROM accounts WHERE id = ?"
 	var account Account
 	account.Flow = new(Flow) // 初始化Flow对象
 
-	var flowStr string
+	var flowStr, expireTimeStr string
 	err := s.SqlDB.QueryRow(query, accountId).Scan(
 		&account.Id,
 		&account.WebUserName,
 		&account.WebPassword,
 		&flowStr,
-		&account.ExpireTime,
+		&expireTimeStr,
 		&account.RateLimit,
 		&account.Remark,
 	)
@@ -935,6 +935,11 @@ func (s *DbUtils) GetAccountInfo(accountId int) (*Account, error) {
 		return nil, fmt.Errorf("流量值转换失败: %v", err)
 	}
 	account.Flow.FlowLimit = int64(flow) // 转换为字节
+
+	// 处理可能为空的expire_time
+	if expireTimeStr != "" {
+		account.ExpireTime = expireTimeStr
+	}
 
 	return &account, nil
 }
