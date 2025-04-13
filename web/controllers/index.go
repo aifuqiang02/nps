@@ -389,10 +389,10 @@ func (s *IndexController) GetPricePlan() {
 		"code": 200,
 		"msg":  "success",
 		"data": map[string]interface{}{
-			"pricePerGB":    1.0,                // 每GB流量价格(元)
-			"pricePerMonth": 5.0,                // 每月基础费用(元)
-			"userFlow":      account.Flow,       // 用户剩余流量(GB)
-			"expireTime":    account.ExpireTime, // 账号到期时间
+			"pricePerGB":    1.0,                    // 每GB流量价格(元)
+			"pricePerMonth": 5.0,                    // 每月基础费用(元)
+			"userFlow":      account.Flow.FlowLimit, // 用户剩余流量(GB)
+			"expireTime":    account.ExpireTime,     // 账号到期时间
 		},
 	}
 	s.Data["json"] = data

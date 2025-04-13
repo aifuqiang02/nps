@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -888,10 +889,10 @@ func (s *DbUtils) UpdateOrder(order *Order) error {
 	return err
 }
 
-// AddTraffic 给账号添加流量(GB)
+// AddTraffic 给账号添加流量(KB)
 func (s *DbUtils) AddTraffic(accountId int, flow float64) error {
 	query := "UPDATE accounts SET flow = (CASE WHEN flow is null or flow <0 then 0 else flow end) + ? WHERE id = ?"
-	_, err := s.SqlDB.Exec(query, flow, accountId)
+	_, err := s.SqlDB.Exec(query, flow*1024*1024, accountId) // 将GB转换为KB
 	return err
 }
 
@@ -912,11 +913,14 @@ func (s *DbUtils) AddMonths(accountId int, months int) error {
 func (s *DbUtils) GetAccountInfo(accountId int) (*Account, error) {
 	query := "SELECT id, web_user_name, IFNULL(web_password, '') as web_password, flow, expire_time, rate_limit, remark FROM accounts WHERE id = ?"
 	var account Account
+	account.Flow = new(Flow) // 初始化Flow对象
+
+	var flowStr string
 	err := s.SqlDB.QueryRow(query, accountId).Scan(
 		&account.Id,
 		&account.WebUserName,
 		&account.WebPassword,
-		&account.Flow,
+		&flowStr,
 		&account.ExpireTime,
 		&account.RateLimit,
 		&account.Remark,
@@ -924,6 +928,14 @@ func (s *DbUtils) GetAccountInfo(accountId int) (*Account, error) {
 	if err != nil {
 		return nil, fmt.Errorf("获取账户信息失败: %v", err)
 	}
+
+	// 将字符串类型的flow转换为float64 (单位KB)
+	flow, err := strconv.ParseFloat(flowStr, 64)
+	if err != nil {
+		return nil, fmt.Errorf("流量值转换失败: %v", err)
+	}
+	account.Flow.FlowLimit = int64(flow) // 转换为字节
+
 	return &account, nil
 }
 
