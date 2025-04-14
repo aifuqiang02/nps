@@ -59,7 +59,7 @@ func (tcm *TrafficCacheManager) ConditionalFlush() {
 
 func (tcm *TrafficCacheManager) flushTrafficDataToDB(accountID int, record *TrafficRecord) {
 	db := file.GetDb()
-	if err := db.AddTraffic(accountID, float64(record.accumulatedBytes)/(1<<20)); err != nil {
+	if err := db.AddTraffic(accountID, -float64(record.accumulatedBytes)/(1<<10)); err != nil {
 		logs.Error("Failed to flush traffic data for account %d: %v", accountID, err)
 	}
 }
