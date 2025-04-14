@@ -493,7 +493,7 @@ func (s *IndexController) PaymentCallback() {
 	accountId, _ := strconv.Atoi(order.AccountId)
 	if order.PaymentType == "traffic" {
 		// 流量充值逻辑
-		if err := file.GetDb().AddTraffic(accountId, order.Flow); err != nil {
+		if err := file.GetDb().AddTraffic(accountId, order.Flow*1024*1024); err != nil {
 			s.AjaxErr("流量充值失败")
 			return
 		}

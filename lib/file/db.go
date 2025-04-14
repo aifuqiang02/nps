@@ -892,7 +892,7 @@ func (s *DbUtils) UpdateOrder(order *Order) error {
 // AddTraffic 给账号添加流量(KB)
 func (s *DbUtils) AddTraffic(accountId int, flow float64) error {
 	query := "UPDATE accounts SET flow = (CASE WHEN flow is null or flow <0 then 0 else flow end) + ? WHERE id = ?"
-	_, err := s.SqlDB.Exec(query, flow*1024*1024, accountId) // 将GB转换为KB
+	_, err := s.SqlDB.Exec(query, flow, accountId) // 将GB转换为KB
 	return err
 }
 
@@ -942,6 +942,29 @@ func (s *DbUtils) GetAccountInfo(accountId int) (*Account, error) {
 	}
 
 	return &account, nil
+}
+
+func (s *DbUtils) GetAccountFlowLimit(accountID int) (int64, error) {
+	query := "SELECT flow FROM accounts WHERE id = ?"
+	var flowStr string
+	err := s.SqlDB.QueryRow(query, accountID).Scan(&flowStr)
+	if err != nil {
+		return 0, err
+	}
+
+	// 处理空值情况
+	if flowStr == "" {
+		return 0, nil
+	}
+
+	// 解析字符串为float64
+	flow, err := strconv.ParseFloat(flowStr, 64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse flow limit: %v", err)
+	}
+
+	// 转换为字节 (1MB = 1<<20 bytes)
+	return int64(flow * (1 << 20)), nil
 }
 
 func (s *DbUtils) UpdateHost(h *Host) error {

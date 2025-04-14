@@ -85,8 +85,13 @@ func CopyBuffer(dst io.Writer, src io.Reader, flow *file.Flow, task *file.Tunnel
 				if flow != nil && task != nil && task.AccountId > 0 {
 					trafficManager.AccumulateTrafficData(task.AccountId, int64(nw))
 					// <<20 = 1024 * 1024
-					if flow.FlowLimit <= 0 || (flow.FlowLimit > 0 && (flow.FlowLimit<<10) < (flow.ExportFlow+flow.InletFlow)) {
-						logs.Info("流量已经超出.........")
+					flowLimit := trafficManager.GetFlowLimitFromCache(task.AccountId)
+					if err != nil {
+						logs.Error("Failed to get flow limit for account %d: %v", task.AccountId, err)
+						flowLimit = 0
+					}
+					if flowLimit <= 0 {
+						logs.Info("流量已经超出限制 (已用: %d, 限制: %d)", flow.ExportFlow+flow.InletFlow, flowLimit)
 						break
 					}
 				}
