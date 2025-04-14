@@ -1,15 +1,20 @@
 package goroutine
 
 import (
-	"ehang.io/nps/lib/common"
-	"ehang.io/nps/lib/file"
-	"github.com/astaxie/beego/logs"
-	"github.com/panjf2000/ants/v2"
 	"io"
 	"net"
 	"strings"
 	"sync"
+
+	"ehang.io/nps/lib/common"
+	"ehang.io/nps/lib/file"
+	"github.com/astaxie/beego/logs"
+	"github.com/panjf2000/ants/v2"
 )
+
+func init() {
+	InitTrafficManager()
+}
 
 type connGroup struct {
 	src    io.ReadWriteCloser
@@ -79,6 +84,9 @@ func CopyBuffer(dst io.Writer, src io.Reader, flow *file.Flow, task *file.Tunnel
 				//written += int64(nw)
 				if flow != nil {
 					flow.Add(int64(nw), int64(nw))
+					if flow != nil && task != nil && task.AccountId > 0 {
+						trafficManager.AccumulateTrafficData(task.AccountId, int64(nw))
+					}
 					// <<20 = 1024 * 1024
 					if flow.FlowLimit > 0 && (flow.FlowLimit<<20) < (flow.ExportFlow+flow.InletFlow) {
 						logs.Info("流量已经超出.........")
