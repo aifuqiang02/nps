@@ -29,7 +29,7 @@ func NewTrafficCacheManager() *TrafficCacheManager {
 	return &TrafficCacheManager{
 		records:     make(map[int]*TrafficRecord),
 		flowLimits:  make(map[int]int64),
-		flushTicker: time.NewTicker(1 * time.Minute),
+		flushTicker: time.NewTicker(5 * time.Second),
 	}
 }
 
