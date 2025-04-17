@@ -134,17 +134,31 @@ func (s *IndexController) Add() {
 			t.ClientId = client.Id
 		}
 
-		if t.Port <= 0 {
-			t.Port = tool.GenerateServerPort(t.Mode)
-		}
-		if t.Mode == "http" || t.Mode == "https" {
-			t.ExternalServiceDomain = t.Mode + "://" + strconv.Itoa(t.Port) + "." + beego.AppConfig.String("external_service_domain")
+		if t.Mode == "https" {
+			// 动态生成域名格式: https://时间戳.external_service_domain
+			if t.Host == "" {
+				timestamp := time.Now().UnixNano()
+				t.Host = strconv.FormatInt(timestamp, 10) + "." + beego.AppConfig.String("external_service_domain")
+			}
+			t.Scheme = "all"
+			t.AutoHttps = true
+			t.Port = 0
+			t.ExternalServiceDomain = t.Mode + "://" + t.Host
 		} else {
-			t.ExternalServiceDomain = beego.AppConfig.String("external_service_ip") + ":" + strconv.Itoa(t.Port)
-		}
+			if s.GetIntNoErr("port") != t.Port || t.Port == 0 {
+				t.Port = s.GetIntNoErr("port")
 
-		if !tool.TestServerPort(t.Port, t.Mode) {
-			s.AjaxErr("The port cannot be opened because it may has been occupied or is no longer allowed.")
+				if t.Port <= 0 {
+					t.Port = tool.GenerateServerPort(t.Mode)
+				}
+
+				if !tool.TestServerPort(s.GetIntNoErr("port"), t.Mode) {
+					s.AjaxErr("The port cannot be opened because it may has been occupied or is no longer allowed.")
+					return
+				}
+			}
+			t.Host = ""
+			t.ExternalServiceDomain = beego.AppConfig.String("external_service_ip") + ":" + strconv.Itoa(t.Port)
 		}
 		var err error
 		if t.Client, err = file.GetDb().GetClient(s.GetIntNoErr("client_id")); err != nil {
@@ -189,23 +203,7 @@ func (s *IndexController) Edit() {
 		if t, err := file.GetDb().GetTask(id); err != nil {
 			s.error()
 		} else {
-			if s.GetIntNoErr("port") != t.Port || t.Port == 0 {
-				t.Port = s.GetIntNoErr("port")
-
-				if t.Port <= 0 {
-					t.Port = tool.GenerateServerPort(t.Mode)
-				}
-
-				if !tool.TestServerPort(s.GetIntNoErr("port"), t.Mode) {
-					s.AjaxErr("The port cannot be opened because it may has been occupied or is no longer allowed.")
-					return
-				}
-			}
-			if t.Mode == "http" || t.Mode == "https" {
-				t.ExternalServiceDomain = t.Mode + "://" + strconv.Itoa(t.Port) + "." + beego.AppConfig.String("external_service_domain")
-			} else {
-				t.ExternalServiceDomain = beego.AppConfig.String("external_service_ip") + ":" + strconv.Itoa(t.Port)
-			}
+			Mode := s.getEscapeString("mode")
 			t.ServerIp = s.getEscapeString("server_ip")
 			t.Mode = s.getEscapeString("mode")
 			t.Target = &file.Target{TargetStr: s.getEscapeString("target")}
@@ -215,6 +213,33 @@ func (s *IndexController) Edit() {
 			t.StripPre = s.getEscapeString("strip_pre")
 			t.Remark = s.getEscapeString("remark")
 			t.Target.LocalProxy = s.GetBoolNoErr("local_proxy")
+			if Mode == "https" {
+				// 动态生成域名格式: https://时间戳.external_service_domain
+				if t.Host == "" {
+					timestamp := time.Now().UnixNano()
+					t.Host = strconv.FormatInt(timestamp, 10) + "." + beego.AppConfig.String("external_service_domain")
+				}
+				t.Scheme = "all"
+				t.AutoHttps = true
+				t.Port = 0
+				t.ExternalServiceDomain = t.Mode + "://" + t.Host
+			} else {
+				if s.GetIntNoErr("port") != t.Port || t.Port == 0 {
+					t.Port = s.GetIntNoErr("port")
+
+					if t.Port <= 0 {
+						t.Port = tool.GenerateServerPort(t.Mode)
+					}
+
+					if !tool.TestServerPort(s.GetIntNoErr("port"), t.Mode) {
+						s.AjaxErr("The port cannot be opened because it may has been occupied or is no longer allowed.")
+						return
+					}
+				}
+				t.Host = ""
+				t.ExternalServiceDomain = beego.AppConfig.String("external_service_ip") + ":" + strconv.Itoa(t.Port)
+			}
+
 			file.GetDb().UpdateTask(t)
 			server.StopServer(t.Id)
 			server.StartTask(t.Id)

@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"ehang.io/nps/lib/file"
 	"ehang.io/nps/server"
@@ -131,11 +132,15 @@ func (s *IndexController) Add() {
 			t.ClientId = client.Id
 		}
 
-		if t.Port <= 0 {
+		if t.Mode != "https" && t.Port <= 0 {
 			t.Port = tool.GenerateServerPort(t.Mode)
 		}
-		if t.Mode == "http" || t.Mode == "https" {
-			t.ExternalServiceDomain = t.Mode + "://" + strconv.Itoa(t.Port) + "." + beego.AppConfig.String("external_service_domain")
+		if t.Mode == "https" {
+			// 动态生成域名格式: https://时间戳.external_service_domain
+			timestamp := time.Now().UnixNano()
+			t.Host = strconv.FormatInt(timestamp, 10) + "." + beego.AppConfig.String("external_service_domain")
+			t.Scheme = "all"
+			t.AutoHttps = true
 		} else {
 			t.ExternalServiceDomain = beego.AppConfig.String("external_service_ip") + ":" + strconv.Itoa(t.Port)
 		}
@@ -198,8 +203,21 @@ func (s *IndexController) Edit() {
 					return
 				}
 			}
-			if t.Mode == "http" || t.Mode == "https" {
-				t.ExternalServiceDomain = t.Mode + "://" + strconv.Itoa(t.Port) + "." + beego.AppConfig.String("external_service_domain")
+
+			if t.Mode == "https" {
+				// 动态生成域名格式: https://时间戳.external_service_domain
+				timestamp := time.Now().UnixNano()
+				t.Host = strconv.FormatInt(timestamp, 10) + "." + beego.AppConfig.String("external_service_domain")
+				t.Scheme = "all"
+				t.AutoHttps = true
+				t.Port = 0
+			} else {
+				t.Port = tool.GenerateServerPort(t.Mode)
+				t.Host = ""
+			}
+
+			if t.Mode == "https" {
+				t.ExternalServiceDomain = t.Mode + "://" + t.Host
 			} else {
 				t.ExternalServiceDomain = beego.AppConfig.String("external_service_ip") + ":" + strconv.Itoa(t.Port)
 			}
