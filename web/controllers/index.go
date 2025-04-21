@@ -141,7 +141,7 @@ func (s *IndexController) Add() {
 				t.Host = strconv.FormatInt(timestamp, 10) + "." + beego.AppConfig.String("external_service_domain")
 			}
 			t.Scheme = "all"
-			t.AutoHttps = true
+			t.AutoHttps = false
 			t.Port = 0
 			t.ExternalServiceDomain = t.Mode + "://" + t.Host
 		} else {
@@ -220,7 +220,7 @@ func (s *IndexController) Edit() {
 					t.Host = strconv.FormatInt(timestamp, 10) + "." + beego.AppConfig.String("external_service_domain")
 				}
 				t.Scheme = "all"
-				t.AutoHttps = true
+				t.AutoHttps = false
 				t.Port = 0
 				t.ExternalServiceDomain = t.Mode + "://" + t.Host
 			} else {

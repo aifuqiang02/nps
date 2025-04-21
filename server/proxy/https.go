@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 
+	"ehang.io/nps/lib/goroutine"
+
 	"ehang.io/nps/lib/cache"
 	"ehang.io/nps/lib/common"
 	"ehang.io/nps/lib/conn"
@@ -15,6 +17,10 @@ import (
 	"github.com/astaxie/beego/logs"
 	"github.com/pkg/errors"
 )
+
+func init() {
+	goroutine.InitTrafficManager()
+}
 
 type HttpsServer struct {
 	httpServer
@@ -206,13 +212,15 @@ func (https *HttpsServer) handleHttps2(c net.Conn, hostName string, rb []byte, r
 	var targetAddr string
 	var host *file.Host
 	var err error
-	if host, err = file.GetDb().GetInfoByHost(hostName, r); err != nil {
+	if host, err = goroutine.TrafficManager.GetInfoByHost(hostName, r); err != nil {
 		c.Close()
 		logs.Debug("the url %s can't be parsed!", hostName)
 		return
 	}
-	if err := https.CheckFlowAndConnNum(host.Client); err != nil {
-		logs.Debug("client id %d, host id %d, error %s, when https connection", host.Client.Id, host.Id, err.Error())
+
+	flowLimit := goroutine.TrafficManager.GetFlowLimitFromCache(host.AccountId)
+	if flowLimit <= 0 {
+		logs.Info("流量已经超出限制")
 		c.Close()
 		return
 	}

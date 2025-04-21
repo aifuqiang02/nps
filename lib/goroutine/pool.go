@@ -83,9 +83,9 @@ func CopyBuffer(dst io.Writer, src io.Reader, flow *file.Flow, task *file.Tunnel
 			if nw > 0 {
 				//written += int64(nw)
 				if flow != nil && task != nil && task.AccountId > 0 {
-					trafficManager.AccumulateTrafficData(task.AccountId, int64(nw))
+					TrafficManager.AccumulateTrafficData(task.AccountId, int64(nw))
 					// <<20 = 1024 * 1024
-					flowLimit := trafficManager.GetFlowLimitFromCache(task.AccountId)
+					flowLimit := TrafficManager.GetFlowLimitFromCache(task.AccountId)
 					if err != nil {
 						logs.Error("Failed to get flow limit for account %d: %v", task.AccountId, err)
 						flowLimit = 0

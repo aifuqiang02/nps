@@ -219,6 +219,7 @@ type Health struct {
 
 type Host struct {
 	Id           int
+	AccountId    int
 	Host         string //host
 	HeaderChange string //header change
 	HostChange   string //host change

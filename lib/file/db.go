@@ -813,9 +813,9 @@ func (s *DbUtils) GetInfoByHost(host string, r *http.Request) (*Host, error) {
 
 	// 查询匹配的host记录，使用更多字段
 	query := `SELECT 
-		id, host, location, scheme, remark, client_id, 
+		id, host, location, scheme, remark, client_id, account_id,
 		no_store, is_close, auto_https, IFNULL(target, '')
-		FROM tasks WHERE host = ? AND scheme IN (?, 'all') AND is_close = 0`
+		FROM tasks t1 WHERE host = ? AND scheme IN (?, 'all') AND is_close = 0`
 
 	fmt.Println("SQL Query:", query, "with parameters:", ip, r.URL.Scheme)
 	rows, err := s.SqlDB.Query(query, ip, r.URL.Scheme)
@@ -830,11 +830,12 @@ func (s *DbUtils) GetInfoByHost(host string, r *http.Request) (*Host, error) {
 		h.Target = &Target{}
 		h.Flow = &Flow{}
 		var clientId int
+		var accountId int
 		var targetStr string
 
 		// 扫描所有字段
 		if err := rows.Scan(
-			&h.Id, &h.Host, &h.Location, &h.Scheme, &h.Remark, &clientId,
+			&h.Id, &h.Host, &h.Location, &h.Scheme, &h.Remark, &clientId, &accountId,
 			&h.NoStore, &h.IsClose, &h.AutoHttps, &targetStr,
 		); err != nil {
 			continue
@@ -845,6 +846,9 @@ func (s *DbUtils) GetInfoByHost(host string, r *http.Request) (*Host, error) {
 
 		// 初始化Client对象
 		h.Client = &Client{Id: clientId}
+		h.Client.Cnf = &Config{}
+		h.Client.Flow = &Flow{}
+		h.AccountId = accountId
 
 		if h.Location == "" {
 			h.Location = "/"

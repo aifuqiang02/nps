@@ -1,6 +1,7 @@
 package goroutine
 
 import (
+	"net/http"
 	"sync"
 	"time"
 
@@ -9,7 +10,7 @@ import (
 )
 
 var (
-	trafficManager = NewTrafficCacheManager()
+	TrafficManager = NewTrafficCacheManager()
 	initOnce       sync.Once
 )
 
@@ -21,6 +22,8 @@ type TrafficRecord struct {
 type TrafficCacheManager struct {
 	sync.Mutex
 	records     map[int]*TrafficRecord
+	accounts    map[int]*file.Account
+	hosts       map[string]*file.Host
 	flowLimits  map[int]int64 // 流量限制缓存
 	flushTicker *time.Ticker
 }
@@ -29,6 +32,8 @@ func NewTrafficCacheManager() *TrafficCacheManager {
 	return &TrafficCacheManager{
 		records:     make(map[int]*TrafficRecord),
 		flowLimits:  make(map[int]int64),
+		accounts:    make(map[int]*file.Account),
+		hosts:       make(map[string]*file.Host),
 		flushTicker: time.NewTicker(5 * time.Second),
 	}
 }
@@ -61,13 +66,25 @@ func (tcm *TrafficCacheManager) GetFlowLimitFromCache(accountID int) int64 {
 	return limit
 }
 
+// GetInfoByHost 根据请求中的 host 与 URL 信息返回匹配的 host 记录
+func (tcm *TrafficCacheManager) GetInfoByHost(host string, r *http.Request) (*file.Host, error) {
+	if h, exists := tcm.hosts[host]; exists {
+		return h, nil
+	}
+	db := file.GetDb()
+	h, err := db.GetInfoByHost(host, r)
+	tcm.hosts[host] = h
+	return h, err
+}
+
 func (tcm *TrafficCacheManager) updateFlowLimit(accountID int) {
 	db := file.GetDb()
-	limit, err := db.GetAccountFlowLimit(accountID)
+	account, err := db.GetAccountInfo(accountID)
 	if err != nil {
-		logs.Error("Failed to get flow limit for account %d: %v", accountID, err)
 		return
 	}
+	tcm.accounts[accountID] = account
+	limit := account.Flow.FlowLimit * (1 << 20)
 
 	tcm.flowLimits[accountID] = limit
 }
@@ -100,8 +117,8 @@ func (tcm *TrafficCacheManager) flushTrafficDataToDB(accountID int, record *Traf
 func InitTrafficManager() {
 	initOnce.Do(func() {
 		go func() {
-			for range trafficManager.flushTicker.C {
-				trafficManager.ConditionalFlush()
+			for range TrafficManager.flushTicker.C {
+				TrafficManager.ConditionalFlush()
 			}
 		}()
 	})

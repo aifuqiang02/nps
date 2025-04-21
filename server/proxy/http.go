@@ -3,14 +3,6 @@ package proxy
 import (
 	"bufio"
 	"crypto/tls"
-	"ehang.io/nps/bridge"
-	"ehang.io/nps/lib/cache"
-	"ehang.io/nps/lib/common"
-	"ehang.io/nps/lib/conn"
-	"ehang.io/nps/lib/file"
-	"ehang.io/nps/lib/goroutine"
-	"ehang.io/nps/server/connection"
-	"github.com/astaxie/beego/logs"
 	"io"
 	"net"
 	"net/http"
@@ -19,7 +11,20 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"ehang.io/nps/bridge"
+	"ehang.io/nps/lib/cache"
+	"ehang.io/nps/lib/common"
+	"ehang.io/nps/lib/conn"
+	"ehang.io/nps/lib/file"
+	"ehang.io/nps/lib/goroutine"
+	"ehang.io/nps/server/connection"
+	"github.com/astaxie/beego/logs"
 )
+
+func init() {
+	goroutine.InitTrafficManager()
+}
 
 type httpServer struct {
 	BaseServer
@@ -104,7 +109,7 @@ func (s *httpServer) handleTunneling(w http.ResponseWriter, r *http.Request) {
 
 	var host *file.Host
 	var err error
-	host, err = file.GetDb().GetInfoByHost(r.Host, r)
+	host, err = goroutine.TrafficManager.GetInfoByHost(r.Host, r)
 	if err != nil {
 		logs.Debug("the url %s %s %s can't be parsed!", r.URL.Scheme, r.Host, r.RequestURI)
 		return
@@ -173,20 +178,24 @@ reset:
 		return
 	}
 
-	if host, err = file.GetDb().GetInfoByHost(r.Host, r); err != nil {
+	if host, err = goroutine.TrafficManager.GetInfoByHost(r.Host, r); err != nil {
 		logs.Notice("the url %s %s %s can't be parsed!, host %s, url %s, remote address %s", r.URL.Scheme, r.Host, r.RequestURI, r.Host, r.URL.Path, remoteAddr)
 		c.Close()
 		return
 	}
 
-	if err := s.CheckFlowAndConnNum(host.Client); err != nil {
-		logs.Warn("client id %d, host id %d, error %s, when https connection", host.Client.Id, host.Id, err.Error())
+	// <<20 = 1024 * 1024
+	flowLimit := goroutine.TrafficManager.GetFlowLimitFromCache(host.AccountId)
+	if flowLimit <= 0 {
+		logs.Info("流量已经超出限制")
 		c.Close()
 		return
 	}
+
 	if !isReset {
 		defer host.Client.AddConn()
 	}
+
 	if err = s.auth(r, c, host.Client.Cnf.U, host.Client.Cnf.P); err != nil {
 		logs.Warn("auth error", err, r.RemoteAddr)
 		return
@@ -250,7 +259,7 @@ reset:
 					break
 				}
 				logs.Trace("%s request, method %s, host %s, url %s, remote address %s, return cache", r.URL.Scheme, r.Method, r.Host, r.URL.Path, c.RemoteAddr().String())
-				host.Client.Flow.Add(int64(n), int64(n))
+				goroutine.TrafficManager.AccumulateTrafficData(host.AccountId, int64(n+n))
 				//if return cache and does not create a new conn with client and Connection is not set or close, close the connection.
 				if strings.ToLower(r.Header.Get("Connection")) == "close" || strings.ToLower(r.Header.Get("Connection")) == "" {
 					break
@@ -271,7 +280,7 @@ reset:
 			logs.Error(err)
 			break
 		}
-		host.Client.Flow.Add(int64(lenConn.Len), int64(lenConn.Len))
+		goroutine.TrafficManager.AccumulateTrafficData(host.AccountId, int64(lenConn.Len+lenConn.Len))
 
 	readReq:
 		//read req from connection
