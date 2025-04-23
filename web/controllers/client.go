@@ -78,6 +78,16 @@ func (s *ClientController) Add() {
 				s.AjaxErr(err.Error())
 			}
 		}
+
+		// Restart all TCP tasks for this client
+		tasks, _ := file.GetDb().GetTasksByClientId(clientId)
+		for _, task := range tasks {
+			if task.Mode == "tcp" {
+				server.StopServer(task.Id)
+				server.StartTask(task.Id)
+			}
+		}
+
 		rs := make(map[string]interface{})
 		data := make(map[string]interface{})
 		data["clientId"] = clientId
@@ -160,6 +170,15 @@ func (s *ClientController) Edit() {
 
 			c.BlackIpList = RemoveRepeatedElement(strings.Split(s.getEscapeString("blackiplist"), "\r\n"))
 			// No need to store to JSON file anymore as we're using MySQL
+
+			// Restart all TCP tasks for this client
+			tasks, _ := file.GetDb().GetTasksByClientId(id)
+			for _, task := range tasks {
+				if task.Mode == "tcp" {
+					server.StopServer(task.Id)
+					server.StartTask(task.Id)
+				}
+			}
 		}
 		s.AjaxOk("save success")
 	}

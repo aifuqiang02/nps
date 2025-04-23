@@ -63,7 +63,16 @@ func (s *BaseController) Prepare() {
 			return
 		}
 	} else if authToken == "" && s.GetSession("username") == nil {
-		s.TokenFail()
+		// For API requests, return 401
+		if strings.HasPrefix(s.Ctx.Input.Header("Accept"), "application/json") {
+			s.TokenFail()
+			return
+		}
+		// For non-login page requests, redirect to login
+		if s.controllerName != "login" || s.actionName != "index" {
+			s.Redirect(beego.AppConfig.String("web_base_url")+"/login/index", 302)
+			return
+		}
 		return
 	}
 
