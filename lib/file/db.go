@@ -587,7 +587,6 @@ func (s *DbUtils) GetAllTasks() ([]*Tunnel, error) {
 
 		// 初始化Client对象
 		t.Client = &Client{Id: t.ClientId}
-		t.Target = &Target{}
 		t.Client.Flow = &Flow{}
 		t.Client.Cnf = &Config{}
 
