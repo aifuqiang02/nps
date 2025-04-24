@@ -788,18 +788,14 @@ func (s *DbUtils) GetHostById(id int) (*Host, error) {
 	h.Target = &Target{}
 	h.Flow = &Flow{}
 	var clientId int
-	var targetStr string
 
 	// 扫描所有字段
 	if err := s.SqlDB.QueryRow(query, id).Scan(
 		&h.Id, &h.Host, &h.Location, &h.Scheme, &h.Remark, &clientId,
-		&h.NoStore, &h.IsClose, &h.AutoHttps, &targetStr,
+		&h.NoStore, &h.IsClose, &h.AutoHttps, &h.Target.TargetStr,
 	); err != nil {
 		return nil, errors.New("The host could not be parsed")
 	}
-
-	// 设置Target字符串
-	h.Target.TargetStr = targetStr
 
 	// 初始化Client对象
 	h.Client = &Client{Id: clientId}
@@ -831,19 +827,14 @@ func (s *DbUtils) GetInfoByHost(host string, r *http.Request) (*Host, error) {
 		h.Flow = &Flow{}
 		var clientId int
 		var accountId int
-		var targetStr string
 
 		// 扫描所有字段
 		if err := rows.Scan(
 			&h.Id, &h.Host, &h.Location, &h.Scheme, &h.Remark, &clientId, &accountId,
-			&h.NoStore, &h.IsClose, &h.AutoHttps, &targetStr,
+			&h.NoStore, &h.IsClose, &h.AutoHttps, &h.Target.TargetStr,
 		); err != nil {
 			continue
 		}
-
-		// 设置Target字符串
-		h.Target.TargetStr = targetStr
-
 		// 初始化Client对象
 		h.Client = &Client{Id: clientId}
 		h.Client.Cnf = &Config{}
