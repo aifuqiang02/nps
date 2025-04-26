@@ -483,6 +483,7 @@ func (s *DbUtils) GetClient(id int) (*Client, error) {
 		c.Flow = new(Flow)
 	}
 	c.NowRate = 0 // 设置默认值，避免前端读取时为 null
+	c.Cnf = &Config{}
 	return &c, nil
 }
 
