@@ -63,7 +63,13 @@ func (self *LoginController) Verify() {
 	if self.doLogin(username, password, true) {
 		fmt.Println("Verify2:")
 		token := generateToken(username)
-		self.Data["json"] = map[string]interface{}{"code": 200, "msg": "login success", "data": token}
+		account, err := file.GetDb().GetByUsername(username)
+		fmt.Println(err)
+		data := make(map[string]interface{})
+		data["token"] = token
+		data["account"] = account
+
+		self.Data["json"] = map[string]interface{}{"code": 200, "msg": "login success", "data": data}
 	} else {
 		self.Data["json"] = map[string]interface{}{"code": 400, "msg": "username or password incorrect"}
 	}
@@ -165,9 +171,9 @@ func (self *LoginController) Register() {
 			Flow:        &file.Flow{},
 		}
 		if err := file.GetDb().NewAccount(t); err != nil {
-			self.Data["json"] = map[string]interface{}{"status": 0, "msg": err.Error()}
+			self.Data["json"] = map[string]interface{}{"status": 400, "msg": err.Error()}
 		} else {
-			self.Data["json"] = map[string]interface{}{"status": 1, "msg": "register success"}
+			self.Data["json"] = map[string]interface{}{"status": 200, "msg": "register success"}
 		}
 		self.ServeJSON()
 	}
