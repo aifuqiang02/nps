@@ -678,7 +678,7 @@ func (s *DbUtils) GetAllClients() ([]*Client, error) {
 func (s *DbUtils) NewAccount(c *Account) error {
 	// 检查 web 登录用户名是否重复
 	if c.WebUserName != "" && !s.VerifyUserName(c.WebUserName, c.Id) {
-		return errors.New("web login username duplicate, please reset")
+		return errors.New("用户名已存在	")
 	}
 	if c.RateLimit == 0 {
 		c.Rate = rate.NewRate(int64(2 << 23))
