@@ -170,8 +170,12 @@ func (s *IndexController) Add() {
 		if err := file.GetDb().NewTask(t); err != nil {
 			s.AjaxErr(err.Error())
 		}
-		if err := server.AddTask(t); err != nil {
-			s.AjaxErr(err.Error())
+		if t.Mode != "https" {
+			if err := server.AddTask(t); err != nil {
+				s.AjaxErr(err.Error())
+			} else {
+				s.AjaxOkWithId("add success", id)
+			}
 		} else {
 			s.AjaxOkWithId("add success", id)
 		}
