@@ -49,7 +49,7 @@ func (s *ClientController) Add() {
 		vkey := s.getEscapeString("vkey")
 		clientId := file.GetDb().GetClientByVkeyAndAccountId(vkey, accountId)
 		if clientId == 0 {
-			clientId := int(file.GetDb().GetNewClientId())
+			clientId = int(file.GetDb().GetNewClientId())
 			t := &file.Client{
 				VerifyKey: vkey,
 				Id:        clientId,
