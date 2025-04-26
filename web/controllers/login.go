@@ -171,9 +171,9 @@ func (self *LoginController) Register() {
 			Flow:        &file.Flow{},
 		}
 		if err := file.GetDb().NewAccount(t); err != nil {
-			self.Data["json"] = map[string]interface{}{"status": 400, "msg": err.Error()}
+			self.Data["json"] = map[string]interface{}{"code": 400, "msg": err.Error()}
 		} else {
-			self.Data["json"] = map[string]interface{}{"status": 200, "msg": "register success"}
+			self.Data["json"] = map[string]interface{}{"code": 200, "msg": "register success"}
 		}
 		self.ServeJSON()
 	}
