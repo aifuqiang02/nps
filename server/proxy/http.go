@@ -292,10 +292,12 @@ reset:
 		r.URL.Scheme = scheme
 		//What happened ，Why one character less???
 		r.Method = resetReqMethod(r.Method)
+		logs.Info("1-the url %s %s %s can't be parsed!", r.URL.Scheme, r.Host, r.RequestURI)
 		if hostTmp, err := file.GetDb().GetInfoByHost(r.Host, r); err != nil {
-			logs.Notice("the url %s %s %s can't be parsed!", r.URL.Scheme, r.Host, r.RequestURI)
+			logs.Notice("2-the url %s %s %s can't be parsed!", r.URL.Scheme, r.Host, r.RequestURI)
 			break
 		} else if host != hostTmp {
+			logs.Notice("3-the url %s %s %s can't be parsed!", r.URL.Scheme, r.Host, r.RequestURI)
 			host = hostTmp
 			isReset = true
 			connClient.Close()

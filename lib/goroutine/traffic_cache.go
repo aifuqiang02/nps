@@ -53,24 +53,27 @@ func (tcm *TrafficCacheManager) GetFlowLimitFromCache(accountID int) int64 {
 	if limit, exists := tcm.flowLimits[accountID]; exists {
 		return limit
 	}
-
+	logs.Debug("account %d GetFlowLimitFromCache start 2!", accountID)
 	// 缓存中没有则从数据库获取
 	db := file.GetDb()
 	limit, err := db.GetAccountFlowLimit(accountID)
+	logs.Debug("account %d GetFlowLimitFromCache start 3!", limit)
 	if err != nil {
 		logs.Error("Failed to get flow limit for account %d: %v", accountID, err)
 		return 0
 	}
-
+	logs.Debug("account %d GetFlowLimitFromCache start 4!", limit)
 	tcm.flowLimits[accountID] = limit
 	return limit
 }
 
 // GetInfoByHost 根据请求中的 host 与 URL 信息返回匹配的 host 记录
 func (tcm *TrafficCacheManager) GetInfoByHost(host string, r *http.Request) (*file.Host, error) {
+
 	if h, exists := tcm.hosts[host]; exists {
 		return h, nil
 	}
+	logs.Info("GetInfoByHost %s", host)
 	db := file.GetDb()
 	h, err := db.GetInfoByHost(host, r)
 	tcm.hosts[host] = h

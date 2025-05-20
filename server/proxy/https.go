@@ -67,13 +67,16 @@ func (https *HttpsServer) Start() error {
 			} else {
 
 				r := buildHttpsRequest(serverName)
+				logs.Debug("1the url %s can't be parsed!,remote addr %s", serverName, c.RemoteAddr().String())
 				if host, err := file.GetDb().GetInfoByHost(serverName, r); err != nil {
 					c.Close()
-					logs.Debug("the url %s can't be parsed!,remote addr %s", serverName, c.RemoteAddr().String())
+					logs.Debug("2the url %s can't be parsed!,remote addr %s", serverName, c.RemoteAddr().String())
 					return
 				} else {
+					logs.Debug("3the url %s can't be parsed!,remote addr %s", serverName, c.RemoteAddr().String())
 					if !common.FileExists(host.CertFilePath) || !common.FileExists(host.KeyFilePath) {
 						//if the host cert file or key file is not set ,use the default file
+						logs.Debug("4the url %s can't be parsed!,remote addr %s", serverName, c.RemoteAddr().String())
 						if v, ok := https.httpsListenerMap.Load("default"); ok {
 							l = v.(*HttpsListener)
 						} else {
@@ -82,6 +85,7 @@ func (https *HttpsServer) Start() error {
 							return
 						}
 					} else {
+						logs.Debug("5the url %s can't be parsed!,remote addr %s", serverName, c.RemoteAddr().String())
 						if host.CertFilePath == "" || host.KeyFilePath == "" {
 							logs.Debug("加载客户端本地证书")
 							https.handleHttps2(c, serverName, rb, r)
@@ -254,8 +258,9 @@ func (https *HttpsServer) handleHttps2(c net.Conn, hostName string, rb []byte, r
 		logs.Debug("the url %s can't be parsed!", hostName)
 		return
 	}
-
+	logs.Debug("the url %s GetFlowLimitFromCache start!", hostName)
 	flowLimit := goroutine.TrafficManager.GetFlowLimitFromCache(host.AccountId)
+	logs.Debug("the url %s GetFlowLimitFromCache end! ， %d", hostName, flowLimit)
 	if flowLimit <= 0 {
 		logs.Info("流量已经超出限制")
 		c.Close()
