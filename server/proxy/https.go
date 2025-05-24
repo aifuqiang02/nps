@@ -42,7 +42,9 @@ func NewHttpsServer(l net.Listener, bridge NetBridge, useCache bool, cacheLen in
 
 // start https server
 func (https *HttpsServer) Start() error {
+	logs.Debug("0-1Start ")
 	if b, err := beego.AppConfig.Bool("https_just_proxy"); err == nil && b {
+		logs.Debug("0-2Start ")
 		conn.Accept(https.listener, func(c net.Conn) {
 			https.handleHttps(c)
 		})
@@ -50,42 +52,48 @@ func (https *HttpsServer) Start() error {
 		//start the default listener
 		certFile := beego.AppConfig.String("https_default_cert_file")
 		keyFile := beego.AppConfig.String("https_default_key_file")
+		logs.Debug("0-3Start %s", certFile)
 		if common.FileExists(certFile) && common.FileExists(keyFile) {
+			logs.Debug("0-4Start ")
 			l := NewHttpsListener(https.listener)
 			https.NewHttps(l, certFile, keyFile)
 			https.httpsListenerMap.Store("default", l)
 		}
 		conn.Accept(https.listener, func(c net.Conn) {
 			serverName, rb := GetServerNameFromClientHello(c)
-
+			logs.Debug("0-5Start %s", serverName)
 			if serverName == "" {
 				serverName = "default"
 			}
 			var l *HttpsListener
 			if v, ok := https.httpsListenerMap.Load(serverName); ok {
+				logs.Debug("0-6Start ")
 				l = v.(*HttpsListener)
 			} else {
-
+				logs.Debug("0-7Start ")
 				r := buildHttpsRequest(serverName)
-				logs.Debug("1the url %s can't be parsed!,remote addr %s", serverName, c.RemoteAddr().String())
+				logs.Debug("1Start ")
 				if host, err := file.GetDb().GetInfoByHost(serverName, r); err != nil {
 					c.Close()
-					logs.Debug("2the url %s can't be parsed!,remote addr %s", serverName, c.RemoteAddr().String())
+					logs.Debug("2Start ")
 					return
 				} else {
-					logs.Debug("3the url %s can't be parsed!,remote addr %s", serverName, c.RemoteAddr().String())
+					logs.Debug("3Start ")
 					if !common.FileExists(host.CertFilePath) || !common.FileExists(host.KeyFilePath) {
 						//if the host cert file or key file is not set ,use the default file
-						logs.Debug("4the url %s can't be parsed!,remote addr %s", serverName, c.RemoteAddr().String())
+						logs.Debug("4Start ")
 						if v, ok := https.httpsListenerMap.Load("default"); ok {
+							logs.Debug("5Start ")
 							l = v.(*HttpsListener)
 						} else {
+							logs.Debug("6Start ")
 							c.Close()
 							logs.Error("the key %s cert %s file is not exist", host.KeyFilePath, host.CertFilePath)
 							return
 						}
+						logs.Debug("7Start ")
 					} else {
-						logs.Debug("5the url %s can't be parsed!,remote addr %s", serverName, c.RemoteAddr().String())
+						logs.Debug("8Start ")
 						if host.CertFilePath == "" || host.KeyFilePath == "" {
 							logs.Debug("加载客户端本地证书")
 							https.handleHttps2(c, serverName, rb, r)

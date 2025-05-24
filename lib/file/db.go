@@ -10,11 +10,11 @@ import (
 	"strings"
 	"sync"
 
-	_ "github.com/go-sql-driver/mysql"
-
 	"ehang.io/nps/lib/common"
 	"ehang.io/nps/lib/crypt"
 	"ehang.io/nps/lib/rate"
+	"github.com/astaxie/beego/logs"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 // DbUtils 提供MySQL存储操作
@@ -813,7 +813,8 @@ func (s *DbUtils) GetInfoByHost(host string, r *http.Request) (*Host, error) {
 		no_store, is_close, auto_https, IFNULL(target, '')
 		FROM tasks t1 WHERE host = ? AND scheme IN (?, 'all') AND is_close = 0`
 
-	fmt.Println("SQL Query:", query, "with parameters:", ip, r.URL.Scheme)
+	fmt.Println("SQL Query1:", query, "with parameters:", ip, r.URL.Scheme)
+	logs.Info("SQL Query2:%s %s %s  %s ", query, "with parameters:", ip, r.URL.Scheme)
 	rows, err := s.SqlDB.Query(query, ip, r.URL.Scheme)
 	if err != nil {
 		return nil, err
