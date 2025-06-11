@@ -381,7 +381,7 @@ func (s *DbUtils) GetHost(start, length int, id int, search string) ([]*Host, in
 	if err := s.SqlDB.QueryRow(countQuery).Scan(&cnt); err != nil {
 		return nil, 0, err
 	}
-	query := fmt.Sprintf("SELECT id, host, location, scheme, remark FROM tasks %s LIMIT %d, %d", where, start, length)
+	query := fmt.Sprintf("SELECT id, host, location, scheme, remark,client_id,account_id FROM tasks %s LIMIT %d, %d", where, start, length)
 	fmt.Println("SQL Query for data:", query)
 	rows, err := s.SqlDB.Query(query)
 	if err != nil {
@@ -391,7 +391,8 @@ func (s *DbUtils) GetHost(start, length int, id int, search string) ([]*Host, in
 	var list []*Host
 	for rows.Next() {
 		var h Host
-		if err := rows.Scan(&h.Id, &h.Host, &h.Location, &h.Scheme, &h.Remark); err != nil {
+		h.Client = &Client{}
+		if err := rows.Scan(&h.Id, &h.Host, &h.Location, &h.Scheme, &h.Remark, &h.Client.Id, &h.AccountId); err != nil {
 			return nil, 0, err
 		}
 		list = append(list, &h)
@@ -596,7 +597,7 @@ func (s *DbUtils) GetAllTasks() ([]*Tunnel, error) {
 	return tasks, nil
 }
 
-func (s *DbUtils) GetUserTasks(accountId int) ([]*Tunnel, error) {
+func (s *DbUtils) GetUserTasks(accountId int, clientId int) ([]*Tunnel, error) {
 	// 查询指定账户的任务记录，使用完整的字段列表
 	query := `SELECT 
 		id, account_id, port, server_ip, mode, status, run_status, client_id, 

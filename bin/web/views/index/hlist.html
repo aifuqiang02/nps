@@ -41,6 +41,9 @@
         toolbar: "#toolbar",
         method: 'post', // 服务器数据的请求方式 get or post
         url: window.location, // 服务器数据的加载地址
+        responseHandler: function(res) {
+            return res.data.rows;
+        },
         queryParams: function (params) {
             return {
                 "offset": params.offset,
@@ -63,16 +66,25 @@
         onExpandRow: function () {$('body').setLang ('.detail-view');},
         onPostBody: function (data) { if ($(this)[0].locale != undefined ) $('body').setLang ('#table'); },
         detailFormatter: function (index, row, element) {
-            return '<b langtag="word-exportflow"></b>: ' + changeunit(row.Flow.ExportFlow) + '&emsp;'
-                    + '<b langtag="word-inletflow"></b>: ' + changeunit(row.Flow.InletFlow) + '&emsp;'
-                    + '<b langtag="word-crypt"></b>: ' + row.Client.Cnf.Crypt + '&emsp;'
-                    + '<b langtag="word-compress"></b>: ' + row.Client.Cnf.Compress + '&emsp;'
-                    + '<b langtag="word-basicusername"></b>: ' + row.Client.Cnf.U + '&emsp;'
-                    + '<b langtag="word-basicpassword"></b>: ' + row.Client.Cnf.P + '&emsp;<br/><br>'
-                    + '<b langtag="word-httpscert"></b>: ' + row.CertFilePath + '&emsp;'
-                    + '<b langtag="word-httpskey"></b>: ' + row.KeyFilePath + '&emsp;<br/><br>'
-                    + '<b langtag="word-requestheader"></b>: ' + row.HeaderChange + '&emsp;<br/><br>'
-                    + '<b langtag="word-requesthost"></b>: ' + row.HostChange + '&emsp;'
+            let flowInfo = '';
+            if (row.Flow) {
+                flowInfo = '<b langtag="word-exportflow"></b>: ' + (row.Flow.ExportFlow ? changeunit(row.Flow.ExportFlow) : '') + '&emsp;'
+                    + '<b langtag="word-inletflow"></b>: ' + (row.Flow.InletFlow ? changeunit(row.Flow.InletFlow) : '') + '&emsp;';
+            }
+            
+            let clientInfo = '';
+            if (row.Client && row.Client.Cnf) {
+                clientInfo = '<b langtag="word-crypt"></b>: ' + (row.Client.Cnf.Crypt || '') + '&emsp;'
+                    + '<b langtag="word-compress"></b>: ' + (row.Client.Cnf.Compress || '') + '&emsp;'
+                    + '<b langtag="word-basicusername"></b>: ' + (row.Client.Cnf.U || '') + '&emsp;'
+                    + '<b langtag="word-basicpassword"></b>: ' + (row.Client.Cnf.P || '') + '&emsp;<br/><br>';
+            }
+            
+            return flowInfo + clientInfo
+                + '<b langtag="word-httpscert"></b>: ' + (row.CertFilePath || '') + '&emsp;'
+                + '<b langtag="word-httpskey"></b>: ' + (row.KeyFilePath || '') + '&emsp;<br/><br>'
+                + '<b langtag="word-requestheader"></b>: ' + (row.HeaderChange || '') + '&emsp;<br/><br>'
+                + '<b langtag="word-requesthost"></b>: ' + (row.HostChange || '') + '&emsp;'
         },
         //表格的列
         columns: [
@@ -88,7 +100,7 @@
                 halign: 'center',
                 visible: true,//false表示不显示
                 formatter: function (value, row, index) {
-                    return row.Client.Id + '-' + row.Client.Remark
+                    return row.Client ? (row.Client.Id + '-' + (row.Client.Remark || '')) : ''
                 }
             },
             {
@@ -127,7 +139,7 @@
                 halign: 'center',
                 visible: true,//false表示不显示
                 formatter: function (value, row, index) {
-                    return row.Target.TargetStr
+                    return row.Target ? row.Target.TargetStr : ''
                 }
             },
             {
@@ -143,8 +155,8 @@
                 halign: 'center',
                 visible: true,//false表示不显示
                 formatter: function (value, row, index) {
-                    hosturl = ((row.Scheme == 'http' ) ? 'http://' : 'https://') + row.Host + row.Location
-                    if (row.Client.IsConnect) {
+                    hosturl = ((row.Scheme == 'http' ) ? 'http://' : 'https://') + row.Host + (row.Location || '')
+                    if (row.Client && row.Client.IsConnect) {
                         return '<a href="' + hosturl + '" target="_blank"><span class="badge badge-primary" langtag="word-online"></span></a>'
                     } else {
                         return '<span class="badge badge-badge" langtag="word-offline"></span>'

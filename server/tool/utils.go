@@ -8,6 +8,7 @@ import (
 
 	"ehang.io/nps/lib/common"
 	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/logs"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/load"
 	"github.com/shirou/gopsutil/v3/mem"
@@ -40,6 +41,7 @@ func TestServerPort(p int, m string) (b bool) {
 	}
 	if len(ports) != 0 {
 		if !common.InIntArr(ports, p) {
+			logs.Info("port %s", p, "不在白名单范围")
 			return false
 		}
 	}

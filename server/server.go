@@ -342,7 +342,7 @@ func GetTunnelV2(start, length int, typeVal string, accountId int, clientId int,
 	all_list := make([]*file.Tunnel, 0) // store all Tunnel
 	list := make([]*file.Tunnel, 0)
 	var cnt int
-	tasks, err := file.GetDb().GetUserTasks(accountId)
+	tasks, err := file.GetDb().GetUserTasks(accountId, clientId)
 	if err != nil {
 		logs.Error("Failed to get tasks:", err)
 		return nil, 0

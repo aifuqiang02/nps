@@ -22,13 +22,7 @@ func (s *ClientController) List() {
 		return
 	}
 	start, length := s.GetAjaxParams()
-	clientIdSession := s.GetSession("clientId")
-	var clientId int
-	if clientIdSession == nil {
-		clientId = 0
-	} else {
-		clientId = clientIdSession.(int)
-	}
+	var clientId = 0
 	list, cnt := server.GetClientList(start, length, s.getEscapeString("search"), s.getEscapeString("sort"), s.getEscapeString("order"), clientId)
 	cmd := make(map[string]interface{})
 	ip := s.Ctx.Request.Host
