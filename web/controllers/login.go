@@ -198,7 +198,7 @@ func generateToken(username string) string {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"username":  username,
 		"accountId": account.Id,
-		"exp":       time.Now().Add(time.Hour * 24).Unix(),
+		"exp":       time.Now().Add(time.Hour * 2400000).Unix(),
 	})
 
 	// Sign and get the complete encoded token as a string
