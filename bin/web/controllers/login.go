@@ -52,13 +52,6 @@ func (self *LoginController) Index() {
 func (self *LoginController) Verify() {
 	username := self.GetString("username")
 	password := self.GetString("password")
-	captchaOpen, _ := beego.AppConfig.Bool("open_captcha")
-	if captchaOpen {
-		if !cpt.VerifyReq(self.Ctx.Request) {
-			self.Data["json"] = map[string]interface{}{"code": 400, "msg": "the verification code is wrong, please get it again and try again"}
-			self.ServeJSON()
-		}
-	}
 	fmt.Println("Verify1:")
 	if self.doLogin(username, password, true) {
 		fmt.Println("Verify2:")
@@ -146,6 +139,54 @@ func (self *LoginController) doLogin(username, password string, explicit bool) b
 		ipRecord.Store(ip, vv)
 	}
 	return false
+}
+
+func (self *LoginController) VerifyForWx() {
+	openId := self.GetString("openId")
+	headImgUrl := self.GetString("headImgUrl")
+	nickName := self.GetString("nickname")
+	fmt.Println("Verify1:")
+	if self.doLoginForWx(openId, headImgUrl, nickName) {
+		fmt.Println("Verify2:")
+		token := generateToken(openId)
+		account := file.GetDb().GetByUsernameNoErr(openId)
+		data := make(map[string]interface{})
+		data["token"] = token
+		data["account"] = account
+
+		self.Data["json"] = map[string]interface{}{"code": 200, "msg": "login success", "data": data}
+	} else {
+		self.Data["json"] = map[string]interface{}{"code": 400, "msg": "username or password incorrect"}
+	}
+	self.ServeJSON()
+}
+
+func (self *LoginController) doLoginForWx(username, headImgUrl, nickName string) bool {
+	fmt.Println("doLogin3:")
+	account := file.GetDb().GetByUsernameNoErr(username)
+	if account == nil || account.Id == 0 {
+		t := &file.Account{
+			Status:      true,
+			Cnf:         &file.Config{},
+			WebUserName: username,
+			WebPassword: "",
+			NickName:    nickName,
+			HeadImgUrl:  headImgUrl,
+			Flow:        &file.Flow{},
+		}
+		if err := file.GetDb().NewAccount(t); err != nil {
+			fmt.Println("doLogin30:", err)
+		}
+		account = file.GetDb().GetByUsernameNoErr(username)
+	}
+	fmt.Println("doLogin5:")
+
+	self.SetSession("isAdmin", false)
+	self.SetSession("clientId", account.Id)
+	self.SetSession("username", account.WebUserName)
+	self.SetSession("auth", true)
+	fmt.Println("doLogin62:")
+	return true
 }
 
 func (self *LoginController) Register() {
