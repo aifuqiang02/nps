@@ -65,6 +65,8 @@ type Account struct {
 	ExpireTime      string
 	Id              int        //id
 	Remark          string     //remark
+	HeadImgUrl      string     //headImgUrl
+	NickName        string     //nickName
 	Status          bool       //is allow connect
 	RateLimit       int        //rate /kb
 	Flow            *Flow      //flow setting

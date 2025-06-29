@@ -639,16 +639,28 @@ func (s *DbUtils) GetUserTasks(accountId int, clientId int) ([]*Tunnel, error) {
 }
 
 func (s *DbUtils) GetByUsername(username string) (*Account, error) {
-	query := "SELECT id, web_user_name, IFNULL(web_password, '') as web_password, rate_limit, remark FROM accounts WHERE status = 1 and web_user_name = ?"
+	query := "SELECT id, web_user_name, IFNULL(web_password, '') as web_password, IFNULL(nick_name, '') as nick_name, IFNULL(head_img_url, '') as head_img_url, rate_limit, remark FROM accounts WHERE status = 1 and web_user_name = ?"
 	fmt.Println("SQL Query:", query, "with parameter:", username)
 	var account Account
-	err := s.SqlDB.QueryRow(query, username).Scan(&account.Id, &account.WebUserName, &account.WebPassword, &account.RateLimit, &account.Remark)
+	err := s.SqlDB.QueryRow(query, username).Scan(&account.Id, &account.WebUserName, &account.WebPassword, &account.NickName, &account.HeadImgUrl, &account.RateLimit, &account.Remark)
 
 	if err != nil {
 		fmt.Println("GetByUsername err:", err)
 		return nil, errors.New("账号不存在")
 	}
 	return &account, nil
+}
+
+func (s *DbUtils) GetByUsernameNoErr(username string) *Account {
+	query := "SELECT id, web_user_name, IFNULL(web_password, '') as web_password, IFNULL(nick_name, '') as nick_name, IFNULL(head_img_url, '') as head_img_url, rate_limit, remark FROM accounts WHERE status = 1 and web_user_name = ?"
+	fmt.Println("SQL Query:", query, "with parameter:", username)
+	var account Account
+	err := s.SqlDB.QueryRow(query, username).Scan(&account.Id, &account.WebUserName, &account.WebPassword, &account.NickName, &account.HeadImgUrl, &account.RateLimit, &account.Remark)
+
+	if err != nil {
+		fmt.Println("GetByUsername err:", err)
+	}
+	return &account
 }
 
 func (s *DbUtils) GetAllClients() ([]*Client, error) {
@@ -689,9 +701,9 @@ func (s *DbUtils) NewAccount(c *Account) error {
 	}
 	c.Rate.Start()
 
-	insertQuery := "INSERT INTO accounts (web_user_name, web_password, rate_limit, remark) VALUES (?, ?, ?, ?)"
-	fmt.Println("SQL Exec:", insertQuery, "with parameters:", c.WebUserName, c.WebPassword, c.RateLimit, c.Remark)
-	_, err := s.SqlDB.Exec(insertQuery, c.WebUserName, c.WebPassword, c.RateLimit, c.Remark)
+	insertQuery := "INSERT INTO accounts (web_user_name, web_password,nick_name,head_img_url, rate_limit, remark) VALUES (?, ?, ?, ?, ?, ?)"
+	fmt.Println("SQL Exec:", insertQuery, "with parameters:", c.WebUserName, c.WebPassword, c.NickName, c.HeadImgUrl, c.RateLimit, c.Remark)
+	_, err := s.SqlDB.Exec(insertQuery, c.WebUserName, c.WebPassword, c.NickName, c.HeadImgUrl, c.RateLimit, c.Remark)
 	return err
 }
 
