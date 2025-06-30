@@ -418,10 +418,8 @@ func (s *IndexController) GetPricePlan() {
 		"code": 200,
 		"msg":  "success",
 		"data": map[string]interface{}{
-			"pricePerGB":    1.0,                    // 每GB流量价格(元)
-			"pricePerMonth": 5.0,                    // 每月基础费用(元)
+			"pricePerGB":    0.8                    // 每GB流量价格(元)
 			"userFlow":      account.Flow.FlowLimit, // 用户剩余流量(GB)
-			"expireTime":    account.ExpireTime,     // 账号到期时间
 		},
 	}
 	s.Data["json"] = data
@@ -436,12 +434,7 @@ func (s *IndexController) CreatePaymentOrder() {
 
 	// 计算订单金额
 	var orderAmount float64
-	if paymentType == "traffic" {
-		orderAmount = float64(flow) * 1.0 // 每GB流量价格(元)
-	} else {
-		orderAmount = float64(months) * 5.0 // 每月基础费用(元)
-	}
-
+	orderAmount = float64(flow) * 0.8 // 每GB流量价格(元)
 	// 创建订单对象
 	order := &file.Order{
 		AppId:                 "b8e47ca842ac4ce18d4e17b5bee46f91",
