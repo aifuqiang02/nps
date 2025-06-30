@@ -418,8 +418,8 @@ func (s *IndexController) GetPricePlan() {
 		"code": 200,
 		"msg":  "success",
 		"data": map[string]interface{}{
-			"pricePerGB":    0.8                    // 每GB流量价格(元)
-			"userFlow":      account.Flow.FlowLimit, // 用户剩余流量(GB)
+			"pricePerGB": 0.8,                    // 每GB流量价格(元)
+			"userFlow":   account.Flow.FlowLimit, // 用户剩余流量(GB)
 		},
 	}
 	s.Data["json"] = data

@@ -1,0 +1,268 @@
+<div class="wrapper wrapper-content animated fadeInRight">
+
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5 langtag="page-clientlist"></h5>
+
+                    <div class="ibox-tools">
+                        <a class="collapse-link">
+                            <i class="fa fa-chevron-up"></i>
+                        </a>
+                        <a class="close-link">
+                            <i class="fa fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+            <div class="content">
+            {{if eq true .isAdmin}}
+
+                <div class="table-responsive">
+                    <div id="toolbar">
+                        <a href="{{.web_base_url}}/client/add" class="btn btn-primary dim">
+                        <i class="fa fa-fw fa-lg fa-plus"></i> <span langtag="word-add"></span></a>
+                    </div>
+                    <table id="taskList_table" class="table-striped table-hover" data-mobile-responsive="true"></table>
+                </div>
+            </div>
+            {{end}}
+                <div class="ibox-content">
+
+                    <table id="table"></table>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function getAuthHeader() {
+        var token = localStorage.getItem('token');
+        return token ? {'Authorization': 'Bearer ' + token} : {};
+    }
+
+    // Initialize table after DOM is ready
+    $(document).ready(function() {
+        $('#table').bootstrapTable({
+        toolbar: "#toolbar",
+        method: 'post',
+        url: "{{.web_base_url}}/client/list",
+        contentType: "application/x-www-form-urlencoded",
+        headers: getAuthHeader(),
+        striped: true,
+        search: true,
+        showHeader: true,
+        showColumns: true,
+        showRefresh: true,
+        pagination: true,
+        sidePagination: 'server',
+        pageNumber: 1,
+        pageList: [5, 10, 20, 50],
+        detailView: true,
+        smartDisplay: true,
+        responseHandler: function (res) {
+            // 提取接口返回的 rows 数据
+            return res.data.rows;
+        },
+        onExpandRow: function() { $('body').setLang('.detail-view'); },
+        onPostBody: function(data) { 
+            if ($(this)[0].locale !== undefined) {
+                $('body').setLang('#table'); 
+            }
+        },
+        detailFormatter: function(index, row, element) {
+            row.Cnf = {}
+            return '<b langtag="word-maxconnections"></b>: ' + row.MaxConn + '&emsp;'
+                + '<b langtag="word-curconnections"></b>: ' + row.NowConn + '&emsp;'
+                + '<b langtag="word-flowlimit"></b>: ' + row.Flow.FlowLimit + 'm&emsp;'
+                + '<b langtag="word-ratelimit"></b>: ' + row.RateLimit + 'KB/s&emsp;'
+                + '<b langtag="word-maxtunnels"></b>: ' + row.MaxTunnelNum + '&emsp;<br/><br/>'
+                + '<b langtag="word-webusername"></b>: ' + row.WebUserName + '&emsp;'
+                + '<b langtag="word-webpassword"></b>: ' + row.WebPassword + '&emsp;'
+                + '<b langtag="word-basicusername"></b>: ' + row.Cnf.U + '&emsp;'
+                + '<b langtag="word-basicpassword"></b>: ' + row.Cnf.P + '&emsp;<br/><br/>'
+                + '<b langtag="word-crypt"></b>: <span langtag="word-' + row.Cnf.Crypt + '"></span>&emsp;'
+                + '<b langtag="word-compress"></b>: <span langtag="word-' + row.Cnf.Compress + '"></span>&emsp;'
+                + '<b langtag="word-connectbyconfig"></b>: <span langtag="word-' + row.ConfigConnAllow + '"></span>&emsp;<br/><br/>'
+                + '<b langtag="word-blackip"></b>: ' + row.BlackIpList + '&emsp;<br/><br/>'
+                + '<b langtag="word-createtime"></b>: ' + row.CreateTime + '&emsp;<br/><br/>'
+                + '<b langtag="word-lastonlinetime"></b>: ' + row.LastOnlineTime + '&emsp;<br/><br/>'
+                + '<b langtag="word-quicklycommand"></b>: <span>' + encodeToBase64('{{.ip}}:{{.p}} ' + row.VerifyKey)   + '</span>&emsp;<button class="copy btn btn-info btn-xs" onclick="copyCommand(event)" data-clipboard-text="' + encodeToBase64('{{.ip}}:{{.p}} ' + row.VerifyKey) + '">复制</button><br/>'
+                + '<b langtag="word-commandclient"></b>: ' + '<code>./npc' + '{{.win}} -server={{.ip}}:{{.p}} -vkey=' + row.VerifyKey + ' -type=tcp</code><button class="copy btn btn-info btn-xs" onclick="copyCommand(event)" data-clipboard-text="./npc{{.win}} -server={{.ip}}:{{.p}} -vkey=' + row.VerifyKey + ' -type=tcp">复制</button><br/>'
+                + '<b langtag="word-commandclient-tls"></b>: ' + '<code>./npc{{.win}} -server={{.ip}}:{{.tls_p}} -vkey=' + row.VerifyKey + ' -tls_enable=true</code><button class="copy btn btn-info btn-xs" onclick="copyCommand(event)" data-clipboard-text="./npc{{.win}} -server={{.ip}}:{{.tls_p}} -vkey=' + row.VerifyKey + ' -tls_enable=true">复制</button>'
+        },
+        columns: [
+            {
+                field: 'Id',
+                title: '<span langtag="word-id"></span>',
+                halign: 'center',
+                visible: true
+            },
+            {
+                field: 'Remark',
+                title: '<span langtag="word-remark"></span>',
+                halign: 'center',
+                visible: true
+            },
+            {
+                field: 'Version',
+                title: '<span langtag="word-version"></span>',
+                halign: 'center',
+                visible: true
+            },
+            {
+                field: 'VerifyKey',
+                title: '<span langtag="word-verifykey"></span>',
+                halign: 'center',
+                visible: true,
+                formatter: function(value, row, index) {
+                    if (!row.NoStore) {
+                        return value
+                    } else {
+                        return '<span langtag="word-publicvkey"></span>'
+                    }
+                }
+            },
+            {
+                field: 'Addr',
+                title: '<span langtag="word-address"></span>',
+                halign: 'center',
+                visible: true
+            },
+            {
+                field: 'AccountId',
+                title: '账号Id',
+                halign: 'center',
+                visible: true
+            },
+            {
+                field: 'InletFlow',
+                title: '<span langtag="word-inletflow"></span>',
+                halign: 'center',
+                visible: true,
+                sortable: true,
+                formatter: function(value, row, index) {
+                    return changeunit(row.Flow.InletFlow)
+                }
+            },
+            {
+                field: 'ExportFlow',
+                title: '<span langtag="word-exportflow"></span>',
+                halign: 'center',
+                visible: true,
+                sortable: true,
+                formatter: function(value, row, index) {
+                    return changeunit(row.Flow.ExportFlow)
+                }
+            },
+            {
+                field: 'IsConnect',
+                title: '<span langtag="word-speed"></span>',
+                halign: 'center',
+                visible: true,
+                formatter: function(value, row, index) {
+                    return changeunit(row.NowRate) + "/S"
+                }
+            },
+            {
+                field: 'Status',
+                title: '<span langtag="word-status"></span>',
+                align: 'center',
+                halign: 'center',
+                visible: true,
+                formatter: function(value, row, index) {
+                    if (value) {
+                        return '<span class="badge badge-primary" langtag="word-open"></span>'
+                    } else {
+                        return '<span class="badge badge-badge" langtag="word-close"></span>'
+                    }
+                }
+            },
+            {
+                field: 'IsConnect',
+                title: '<span langtag="word-connect"></span>',
+                align: 'center',
+                halign: 'center',
+                visible: true,
+                formatter: function(value, row, index) {
+                    if (value) {
+                        return '<span class="badge badge-primary" langtag="word-online"></span>'
+                    } else {
+                        return '<span class="badge badge-badge" langtag="word-offline"></span>'
+                    }
+                }
+            },
+            {
+                field: 'option',
+                title: '<span langtag="word-option"></span>',
+                align: 'center',
+                halign: 'center',
+                visible: true,
+                formatter: function(value, row, index) {
+                    btn_group = '<div class="btn-group">'
+
+                    {{if eq true .isAdmin}}
+                    if (row.Status) {
+                    btn_group += '<a onclick="submitform(\'stop\', \'{{.web_base_url}}/client/changestatus\', {\'id\':' + row.Id
+                    btn_group += ', \'status\': 0})" class="btn btn-outline btn-warning"><i class="fa fa-pause"></i></a>'
+                    } else {
+                        btn_group += '<a onclick="submitform(\'start\', \'{{.web_base_url}}/client/changestatus\', {\'id\':' + row.Id
+                        btn_group += ', \'status\': 1})" class="btn btn-outline btn-primary"><i class="fa fa-play"></i></a>'
+                    }
+                    btn_group += '<a onclick="submitform(\'delete\', \'{{.web_base_url}}/client/del\', {\'id\':' + row.Id
+                    btn_group += '})" class="btn btn-outline btn-danger"><i class="fa fa-trash"></i></a>'
+                    {{end}}
+
+                    btn_group += '<a href="{{.web_base_url}}/client/edit?id=' + row.Id
+                    btn_group += '" class="btn btn-outline btn-success"><i class="fa fa-edit"></i></a></div>'
+                    return btn_group
+                }
+            },
+            {
+                field: 'show',
+                title: '<span langtag="word-show">',
+                align: 'center',
+                halign: 'center',
+                visible: true,
+                formatter: function(value, row, index) {
+                    return '<div class="btn-group"><a href="{{.web_base_url}}/index/all?client_id=' + row.Id
+                        + '" class="btn btn-outline btn-primary" langtag="word-tunnel"></a>'
+                        + '<a href="{{.web_base_url}}/index/hostlist?client_id=' + row.Id
+                        + '" class="btn btn-outline btn-success" langtag="word-host"></a></div>'
+                }
+            }
+            ]
+        });
+    });
+
+    function encodeToBase64(str) {
+        return btoa("nps " + str);
+    }
+
+    function copyCommand(event) {
+        event.preventDefault();
+        const button = event.currentTarget;
+        const text = button.getAttribute('data-clipboard-text') || 
+                    button.previousElementSibling.innerText;
+        
+        try {
+            navigator.clipboard.writeText(text).then(function() {
+                toastr.success('复制成功');
+            }).catch(function() {
+                // Fallback for browsers without Clipboard API
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                toastr.success('复制成功');
+            });
+        } catch (err) {
+            toastr.error('复制失败: ' + err.message, '提示');
+        }
+    }
+
+</script>
